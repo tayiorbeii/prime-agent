@@ -1,0 +1,25 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/release-engineer",
+  "label": "Release Engineer",
+  "description": "Prepare a precise, reversible release plan and verify an explicitly approved release action.",
+  "personaFile": "release-engineer.md",
+  "defaultMethods": [
+    "persona-team-release-it"
+  ],
+  "authority": {
+    "mayApprove": [],
+    "mayReject": []
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/release-engineer-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "content.search",
+      "code.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}

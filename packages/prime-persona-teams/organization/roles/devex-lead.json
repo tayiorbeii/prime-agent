@@ -1,0 +1,28 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/devex-lead",
+  "label": "Developer Experience Lead",
+  "description": "Ensure APIs, CLIs, SDKs, and contributor workflows are coherent, learnable, and operable.",
+  "personaFile": "devex-lead.md",
+  "defaultMethods": [
+    "persona-team-pragmatic-programmer",
+    "persona-team-system-design",
+    "persona-team-high-perf-browser",
+    "persona-team-web-typography"
+  ],
+  "authority": {
+    "mayApprove": [],
+    "mayReject": []
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/devex-lead-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "content.search",
+      "code.structure",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}

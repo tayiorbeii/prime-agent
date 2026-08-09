@@ -1,0 +1,29 @@
+{
+  "schema": "prime.organization/v1",
+  "id": "prime-persona-team",
+  "name": "Prime Persona Team",
+  "version": "0.1.0",
+  "functions": [
+    "prime/function/orchestration",
+    "prime/function/planning",
+    "prime/function/delivery",
+    "prime/function/assurance",
+    "prime/function/release-learning"
+  ],
+  "roles": [
+    "prime/role/founder-ceo",
+    "prime/role/product-designer",
+    "prime/role/devex-lead",
+    "prime/role/engineering-manager",
+    "prime/role/implementation-engineer",
+    "prime/role/staff-reviewer",
+    "prime/role/security-officer",
+    "prime/role/qa-lead",
+    "prime/role/release-engineer",
+    "prime/role/retro-ops-manager"
+  ],
+  "workflows": [
+    "prime/workflow/product-delivery"
+  ],
+  "default_workflow": "prime/workflow/product-delivery"
+}

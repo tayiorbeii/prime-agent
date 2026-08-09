@@ -1,0 +1,26 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/retro-ops-manager",
+  "label": "Retro / Ops Manager",
+  "description": "Turn completed delivery evidence into bounded learning and explicit improvement proposals.",
+  "personaFile": "retro-ops-manager.md",
+  "defaultMethods": [
+    "persona-team-traction-eos",
+    "persona-team-drive-motivation",
+    "persona-team-pragmatic-programmer"
+  ],
+  "authority": {
+    "mayApprove": [],
+    "mayReject": []
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/retro-ops-manager-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "content.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}
