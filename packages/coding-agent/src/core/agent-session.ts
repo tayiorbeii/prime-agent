@@ -3946,6 +3946,11 @@ export class AgentSession {
 		} catch {
 			// a failed kernel startup already cleaned up after itself
 		}
+		try {
+			await this._mcpManager?.dispose();
+		} catch {
+			// Sidecar cleanup is best-effort; sync disposal below is the final guard.
+		}
 		this.dispose();
 	}
 
@@ -3988,6 +3993,7 @@ export class AgentSession {
 				if (outcome.delivery) this._settleAgentMessage(agentMessageId, "delivery", deliveryError);
 				if (outcome.completion) this._settleAgentMessage(agentMessageId, "completion", completionError);
 			}
+			this._mcpManager?.disposeSync();
 			this._cancelSessionActions(() => true, deliveryError);
 			this.agent.clearAllQueues();
 			this._extensionRunner.invalidate(

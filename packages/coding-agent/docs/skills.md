@@ -51,6 +51,8 @@ Prime Agent ships with built-in skills that load by default:
 - `prime-intellect` - Prime Intellect products and workflows via the prime CLI: verifiers environments and the Environments Hub, evaluations (local and hosted), Hosted Training and prime-rl, sandboxes, tunnels, Prime Inference, GPU compute, and storage. Reference docs for each area load on demand from the skill's `references/` directory.
 - `skill-creator` - teaches the agent to create new skills: markdown skill layout, frontmatter rules, placement and precedence, and the full Python-backed skill contract (package layout, `run()` convention, optional CLI, kernel venv behavior) with a working template in `references/python-skills.md`.
 - `websearch` - a Python-backed Google search skill using the [Serper](https://serper.dev) API.
+- `jcodemunch` - structured code retrieval through a separately installed MCP sidecar over host-managed stdio or HTTP.
+- `context-mode` - bounded web, documentation, log, and isolated-processing support through a separately installed MCP sidecar over host-managed stdio or HTTP.
 
 Built-in skills behave like any other skill but have the lowest precedence: a user, project, package, or `--skill` skill with the same name overrides the built-in one.
 
@@ -105,6 +107,22 @@ To disable all built-in skills, set `enableBuiltinSkills` to `false` in `setting
   "skills": ["-prime-intellect/SKILL.md"]
 }
 ```
+
+### Optional retrieval sidecars
+
+`jcodemunch` and `context-mode` are bundled Python-backed skills and are
+available by default. When a user has not declared an entry for either name,
+Prime Agent resolves it as a lazy host-managed stdio integration using the
+separately installed `jcodemunch-mcp` or `context-mode` command. A user
+`mcpServers` entry can override the transport, command, args, environment,
+working directory, tool filters, or `enabled` state; `{ "enabled": false }`
+reliably disables the default. Imports never install, launch, index, upgrade,
+or purge anything, and `await <module>.available()` returns an actionable
+diagnostic when a separately installed command is missing. The host keeps
+stdio command and environment settings out of the Python skill; the adapter
+opens a Python session only for HTTP. See each skill and [MCP
+integrations](mcp-integrations.md#optional-local-sidecars) for concrete
+command and HTTP examples.
 
 ### Using Skills from Other Harnesses
 

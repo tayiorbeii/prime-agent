@@ -90,10 +90,12 @@ export type PackageSource =
 	  };
 
 /**
- * Remote/local MCP server an integration connects to. Built-in integrations
- * (Linear/Notion) are defined in the ai/mcp catalog; this is for user-declared
- * servers. The kernel-side integration package reads creds from auth.json
- * (`mcp:<name>`); login/refresh run host-side.
+ * Remote/local MCP server an integration connects to. Built-in HTTP integrations
+ * (Linear/Notion) are defined in the ai/mcp catalog; the bundled Python
+ * integrations (jCodeMunch/Context Mode) have host defaults, while this is for
+ * explicit overrides and additional user-declared servers. HTTP integrations
+ * read creds from auth.json (`mcp:<name>`); stdio integrations stay host-side
+ * and are launched lazily.
  */
 export type McpServerConfig =
 	| {
@@ -113,11 +115,68 @@ export type McpServerConfig =
 			type: "stdio";
 			command: string;
 			args?: string[];
+			/** Working directory, resolved relative to the active workspace cwd. */
+			cwd?: string;
 			env?: Record<string, string>;
 			enabled?: boolean;
 			enabledTools?: string[];
 			disabledTools?: string[];
 	  };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+	return isRecord(value) && Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function isStringArray(value: unknown): value is string[] {
+	return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function optionalString(value: Record<string, unknown>, field: string): boolean {
+	return value[field] === undefined || typeof value[field] === "string";
+}
+
+function optionalBoolean(value: Record<string, unknown>, field: string): boolean {
+	return value[field] === undefined || typeof value[field] === "boolean";
+}
+
+function optionalStringArray(value: Record<string, unknown>, field: string): boolean {
+	return value[field] === undefined || isStringArray(value[field]);
+}
+
+/** Validate untrusted JSON before a user-declared MCP server reaches the host manager. */
+export function parseMcpServerConfig(name: string, value: unknown): { config: McpServerConfig } | { error: string } {
+	const invalid = (reason: string): { error: string } => ({ error: `MCP server "${name}" ${reason}` });
+	if (!isRecord(value)) return invalid("must be an object");
+	if (value.type !== "http" && value.type !== "stdio") return invalid('type must be "http" or "stdio"');
+	if (!optionalBoolean(value, "enabled")) return invalid('"enabled" must be a boolean');
+	if (!optionalStringArray(value, "enabledTools")) return invalid('"enabledTools" must be an array of strings');
+	if (!optionalStringArray(value, "disabledTools")) return invalid('"disabledTools" must be an array of strings');
+
+	if (value.type === "http") {
+		if (typeof value.url !== "string" || value.url.trim().length === 0)
+			return invalid('"url" must be a non-empty string');
+		if (!optionalString(value, "bearerTokenEnvVar")) return invalid('"bearerTokenEnvVar" must be a string');
+		if (!optionalBoolean(value, "oauth")) return invalid('"oauth" must be a boolean');
+		if (value.headers !== undefined && !isStringRecord(value.headers)) {
+			return invalid('"headers" must be an object with string values');
+		}
+		return { config: value as McpServerConfig };
+	}
+
+	if (typeof value.command !== "string" || value.command.trim().length === 0) {
+		return invalid('"command" must be a non-empty string');
+	}
+	if (value.args !== undefined && !isStringArray(value.args)) return invalid('"args" must be an array of strings');
+	if (!optionalString(value, "cwd")) return invalid('"cwd" must be a string');
+	if (value.env !== undefined && !isStringRecord(value.env)) {
+		return invalid('"env" must be an object with string values');
+	}
+	return { config: value as McpServerConfig };
+}
 
 export interface Settings {
 	onboardingShown?: boolean;
@@ -143,7 +202,7 @@ export interface Settings {
 	quietStartup?: boolean;
 	shellCommandPrefix?: string; // Prefix prepended to every bash command (e.g., "shopt -s expand_aliases" for alias support)
 	npmCommand?: string[]; // Command used for npm package lookup/install operations, argv-style (e.g., ["mise", "exec", "node@20", "--", "npm"])
-	mcpServers?: Record<string, McpServerConfig>; // User-declared MCP servers (name → config); built-ins are in the ai/mcp catalog
+	mcpServers?: Record<string, McpServerConfig>; // Explicit MCP overrides/additional servers (name → config); local Python defaults are implicit
 	packages?: PackageSource[]; // Array of npm/git package sources (string or object with filtering)
 	extensions?: string[]; // Array of local extension file paths or directories
 	skills?: string[]; // Array of local skill file paths or directories
@@ -308,6 +367,7 @@ export class SettingsManager {
 	private projectSettingsLoadError: Error | null = null; // Track if project settings file had parse errors
 	private writeQueue: Promise<void> = Promise.resolve();
 	private errors: SettingsError[];
+	private readonly reportedMcpServerErrors = new Set<string>();
 
 	private constructor(
 		storage: SettingsStorage,
@@ -459,6 +519,7 @@ export class SettingsManager {
 
 	async reload(): Promise<void> {
 		await this.writeQueue;
+		this.reportedMcpServerErrors.clear();
 		const globalLoad = SettingsManager.tryLoadFromStorage(this.storage, "global");
 		if (!globalLoad.error) {
 			this.globalSettings = globalLoad.settings;
@@ -1162,7 +1223,35 @@ export class SettingsManager {
 	}
 
 	getMcpServers(): Record<string, McpServerConfig> | undefined {
-		return this.settings.mcpServers;
+		const configured = this.settings.mcpServers as unknown;
+		if (configured === undefined) return undefined;
+		if (!isRecord(configured)) {
+			const message = "MCP servers setting must be an object keyed by server name";
+			if (!this.reportedMcpServerErrors.has(message)) {
+				this.reportedMcpServerErrors.add(message);
+				this.recordError("global", new Error(message));
+			}
+			return {};
+		}
+
+		const valid: Record<string, McpServerConfig> = {};
+		for (const [name, value] of Object.entries(configured)) {
+			const parsed = parseMcpServerConfig(name, value);
+			if ("error" in parsed) {
+				const scope =
+					isRecord(this.projectSettings.mcpServers) && this.projectSettings.mcpServers[name] === value
+						? "project"
+						: "global";
+				const key = `${scope}:${parsed.error}`;
+				if (!this.reportedMcpServerErrors.has(key)) {
+					this.reportedMcpServerErrors.add(key);
+					this.recordError(scope, new Error(parsed.error));
+				}
+				continue;
+			}
+			valid[name] = parsed.config;
+		}
+		return valid;
 	}
 
 	setEnabledModels(patterns: string[] | undefined): void {

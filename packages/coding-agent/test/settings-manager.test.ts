@@ -477,6 +477,35 @@ describe("SettingsManager", () => {
 			expect(manager.getMcpServers()).toBeUndefined();
 		});
 
+		it("preserves stdio server command, cwd, env, and tool filters", () => {
+			writeFileSync(
+				join(agentDir, "settings.json"),
+				JSON.stringify({
+					mcpServers: {
+						local: {
+							type: "stdio",
+							command: "node",
+							args: ["server.mjs"],
+							cwd: "./tools",
+							env: { TOKEN: "secret" },
+							enabledTools: ["read"],
+							disabledTools: ["write"],
+						},
+					},
+				}),
+			);
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getMcpServers()?.local).toEqual({
+				type: "stdio",
+				command: "node",
+				args: ["server.mjs"],
+				cwd: "./tools",
+				env: { TOKEN: "secret" },
+				enabledTools: ["read"],
+				disabledTools: ["write"],
+			});
+		});
+
 		it("merges global and project mcpServers, project winning per key", () => {
 			writeFileSync(
 				join(agentDir, "settings.json"),
@@ -502,6 +531,46 @@ describe("SettingsManager", () => {
 			expect(servers?.shared).toEqual({ type: "http", url: "https://project.shared/mcp" });
 		});
 	});
+	it("skips malformed MCP servers and records actionable diagnostics", () => {
+		const valid = {
+			type: "http",
+			url: "https://mcp.valid.test/mcp",
+			headers: { "X-Test": "1" },
+			enabledTools: ["read"],
+		};
+		writeFileSync(
+			join(agentDir, "settings.json"),
+			JSON.stringify({
+				mcpServers: {
+					valid,
+					argsString: { type: "stdio", command: "node", args: "server.mjs" },
+					envArray: { type: "stdio", command: "node", env: [] },
+					missingCommand: { type: "stdio" },
+					unknownType: { type: "ftp", url: "ftp://mcp.test" },
+					invalidHeaders: { type: "http", url: "https://mcp.test", headers: [] },
+					invalidEnabled: { type: "stdio", command: "node", enabled: "yes" },
+				},
+			}),
+		);
+
+		const manager = SettingsManager.create(projectDir, agentDir);
+		expect(manager.getMcpServers()).toEqual({ valid });
+		const errors = manager.drainErrors();
+		expect(errors).toHaveLength(6);
+		for (const name of [
+			"argsString",
+			"envArray",
+			"missingCommand",
+			"unknownType",
+			"invalidHeaders",
+			"invalidEnabled",
+		]) {
+			expect(errors.some(({ error }) => error.message.includes(`MCP server "${name}"`))).toBe(true);
+		}
+		expect(manager.getMcpServers()).toEqual({ valid });
+		expect(manager.drainErrors()).toEqual([]);
+	});
+
 	describe("idle worker eviction", () => {
 		it("defaults to 90 minutes and treats none as off", () => {
 			const manager = SettingsManager.create(projectDir, agentDir);
