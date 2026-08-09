@@ -138,6 +138,19 @@ This is progressive disclosure: only descriptions are always in context, full in
 
 Skills with `disable-model-invocation: true` are hidden from the startup skill list. They can still be invoked explicitly with `/skill:name`.
 
+## Child-scoped skills
+
+Trusted extensions can register Agent Templates with an exact `skills.include` list. When a parent calls `rlm(..., template="namespace/template/id")`, Prime creates an immutable child resource view:
+
+- ordinary model-visible skills remain available;
+- unselected hidden skills are absent;
+- selected hidden skills are cloned and exposed only inside that child when `exposeSelected` is true;
+- the parent loader and sibling skill objects are never mutated;
+- wildcard, duplicate, missing, or drifted selections fail explicitly; and
+- Python skill bootstrap uses the same scoped view as the child system prompt.
+
+Skill bodies remain progressively disclosed through their normal `SKILL.md` paths. Prime stores the selected skill names and prompt digest with the child session so a package reload cannot silently redefine an admitted persona.
+
 ## Python-Backed Skills
 
 A Python-backed skill uses the same `SKILL.md` metadata and invocation behavior as a markdown skill, but also provides a Python package for the IPython kernel.

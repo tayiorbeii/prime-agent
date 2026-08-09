@@ -1266,6 +1266,38 @@ pi.registerTool({
 });
 ```
 
+### pi.registerAgentTemplate(definition)
+
+Register a validated child-only RLM persona template from a trusted extension. Registration does not add the template catalog, description, or prompt body to the current model prompt.
+
+```typescript
+pi.registerAgentTemplate({
+  schema: "prime.agent-template/v1",
+  id: "acme/template/security-reviewer",
+  label: "Security Reviewer",
+  description: "Independently reviews a candidate snapshot for security risk.",
+  promptAppend: "Inspect only the assigned snapshot. Cite evidence and do not modify it.",
+  thinkingLevel: "high",
+  activeToolNames: ["ipython"],
+  allowedToolNames: ["ipython"],
+  skills: {
+    include: ["acme-threat-modeling"],
+    exposeSelected: true,
+  },
+  metadata: { role: "security-reviewer" },
+});
+```
+
+Template IDs are exact namespaced lowercase identifiers. Duplicate IDs, wildcard skill names, malformed prompt/tool policy, and unknown schema versions fail during extension loading. Definitions returned by `ExtensionRunner` are immutable copies.
+
+A parent selects the template explicitly:
+
+```python
+await rlm("review the candidate", template="acme/template/security-reviewer")
+```
+
+Prime validates the selected skills and tools before child admission. The prompt append and selected hidden skills exist only in that child. A template cannot expand the parent's hard tool allowlist. Omitting `template` preserves ordinary RLM behavior.
+
 ### pi.sendMessage(message, options?)
 
 Inject a custom message into the session.
