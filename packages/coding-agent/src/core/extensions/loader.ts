@@ -14,6 +14,7 @@ import { createEventBus, type EventBus } from "../event-bus.js";
 import type { ExecOptions } from "../exec.js";
 import { execCommand } from "../exec.js";
 import { createSyntheticSourceInfo } from "../source-info.js";
+import { validateAgentTemplateDefinition } from "./agent-templates.js";
 import type {
 	Extension,
 	ExtensionAPI,
@@ -38,7 +39,10 @@ function getAliases(): Record<string, string> {
 	if (_aliases) return _aliases;
 
 	const __dirname = path.dirname(fileURLToPath(import.meta.url));
-	const packageIndex = path.resolve(__dirname, "../..", "index.js");
+	const builtPackageIndex = path.resolve(__dirname, "../..", "index.js");
+	const packageIndex = fs.existsSync(builtPackageIndex)
+		? builtPackageIndex
+		: path.resolve(__dirname, "../..", "index.ts");
 
 	const typeboxEntry = require.resolve("typebox");
 	const typeboxCompileEntry = require.resolve("typebox/compile");
@@ -47,9 +51,11 @@ function getAliases(): Record<string, string> {
 	const packagesRoot = path.resolve(__dirname, "../../../../");
 	const resolveWorkspaceOrImport = (workspaceRelativePath: string, specifier: string): string => {
 		const workspacePath = path.join(packagesRoot, workspaceRelativePath);
-		if (fs.existsSync(workspacePath)) {
-			return workspacePath;
-		}
+		if (fs.existsSync(workspacePath)) return workspacePath;
+		const sourcePath = workspacePath
+			.replace(`${path.sep}dist${path.sep}`, `${path.sep}src${path.sep}`)
+			.replace(/\.js$/, ".ts");
+		if (fs.existsSync(sourcePath)) return sourcePath;
 		return fileURLToPath(import.meta.resolve(specifier));
 	};
 
@@ -141,6 +147,7 @@ export function createExtensionRuntime(): ExtensionRuntime {
 		setThinkingLevel: notInitialized,
 		flagValues: new Map(),
 		pendingProviderRegistrations: [],
+		agentTemplates: new Map(),
 		assertActive,
 		invalidate: (message) => {
 			state.staleMessage ??=
@@ -187,6 +194,24 @@ function createExtensionAPI(
 				sourceInfo: extension.sourceInfo,
 			});
 			runtime.refreshTools();
+		},
+
+		registerAgentTemplate(template): void {
+			runtime.assertActive();
+			const definition = validateAgentTemplateDefinition(template);
+			const existing = runtime.agentTemplates.get(definition.id);
+			if (existing) {
+				throw new Error(
+					`Duplicate agent template "${definition.id}" registered by ${extension.path}; already registered by ${existing.extensionPath}`,
+				);
+			}
+			const registered = {
+				definition,
+				sourceInfo: extension.sourceInfo,
+				extensionPath: extension.path,
+			};
+			extension.agentTemplates?.set(definition.id, registered);
+			runtime.agentTemplates.set(definition.id, registered);
 		},
 
 		registerCommand(name: string, options: Omit<RegisteredCommand, "name" | "sourceInfo">): void {
@@ -367,11 +392,18 @@ function createExtension(extensionPath: string, resolvedPath: string): Extension
 		sourceInfo: createSyntheticSourceInfo(extensionPath, { source, baseDir }),
 		handlers: new Map(),
 		tools: new Map(),
+		agentTemplates: new Map(),
 		messageRenderers: new Map(),
 		commands: new Map(),
 		flags: new Map(),
 		shortcuts: new Map(),
 	};
+}
+
+function rollbackAgentTemplates(extension: Extension | undefined, runtime: ExtensionRuntime): void {
+	for (const [id, registered] of extension?.agentTemplates ?? []) {
+		if (runtime.agentTemplates.get(id) === registered) runtime.agentTemplates.delete(id);
+	}
 }
 
 async function loadExtension(
@@ -381,6 +413,7 @@ async function loadExtension(
 	runtime: ExtensionRuntime,
 ): Promise<{ extension: Extension | null; error: string | null }> {
 	const resolvedPath = resolvePath(extensionPath, cwd);
+	let extension: Extension | undefined;
 
 	try {
 		const factory = await loadExtensionModule(resolvedPath);
@@ -388,12 +421,13 @@ async function loadExtension(
 			return { extension: null, error: `Extension does not export a valid factory function: ${extensionPath}` };
 		}
 
-		const extension = createExtension(extensionPath, resolvedPath);
+		extension = createExtension(extensionPath, resolvedPath);
 		const api = createExtensionAPI(extension, runtime, cwd, eventBus);
 		await factory(api);
 
 		return { extension, error: null };
 	} catch (err) {
+		rollbackAgentTemplates(extension, runtime);
 		const message = err instanceof Error ? err.message : String(err);
 		return { extension: null, error: `Failed to load extension: ${message}` };
 	}
@@ -411,8 +445,13 @@ export async function loadExtensionFromFactory(
 ): Promise<Extension> {
 	const extension = createExtension(extensionPath, extensionPath);
 	const api = createExtensionAPI(extension, runtime, cwd, eventBus);
-	await factory(api);
-	return extension;
+	try {
+		await factory(api);
+		return extension;
+	} catch (error) {
+		rollbackAgentTemplates(extension, runtime);
+		throw error;
+	}
 }
 
 /**

@@ -192,7 +192,13 @@ class JCodeMunchTest(unittest.TestCase):
         async def open_session(stack):
             return session
 
-        with mock.patch.object(integration, "_open_session", open_session):
+        async def host_request(request_type, payload=None):
+            return {}
+
+        with (
+            mock.patch.object(integration, "_open_session", open_session),
+            mock.patch.object(integration, "_host_request", host_request),
+        ):
             with self.assertRaisesRegex(AttributeError, "does not provide 'get_file_outline'"):
                 run(integration.call_tool("get_file_outline", {"repo": "demo", "file_path": "a.py"}))
 

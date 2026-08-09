@@ -150,8 +150,9 @@ await rlm.run("subtask")
 
 Supported `rlm.run` options are:
 
-- `name`: a unique readable child session name; and
-- `model`: an exact `provider/model` selector from `rlm.find_models()`.
+- `name`: a unique readable child session name;
+- `model`: an exact `provider/model` selector from `rlm.find_models()`; and
+- `template`: an exact Agent Template ID registered by a trusted extension.
 
 Unknown options fail instead of being ignored. Model search is bounded to active, non-expired credentials. If an exact selection is unavailable or fails auth preflight, spawn fails instead of silently falling back to another model. A child otherwise inherits the parent model.
 
@@ -160,15 +161,17 @@ Unknown options fail instead of being ignored. Model search is bounded to active
 `AgentSession.runRlmChild()` performs the following sequence:
 
 1. Check `RLM_DEPTH < RLM_MAX_DEPTH`.
-2. Resolve the requested model or inherit the parent model.
+2. Resolve the requested template exactly, validate its skill scope and tool policy, then resolve the requested model or inherit the parent model.
 3. Create a `sub-xxxxxxxx` child directory under the parent artifact directory.
 4. Admit the task into the parent registry and return its `RLMSpawnHandle`.
 5. In detached work, create a child `SessionManager`, `Agent`, and `AgentSession`.
-6. Reuse provider hooks, resource loader, model registry, tools, transport, retry settings, and thinking configuration.
-7. Run the child prompt, retain its session, and update lifecycle state independently of the admission call.
+6. Reuse provider hooks, model registry, transport, and retry settings while applying any resolved child-only prompt, tool intersection, thinking level, and immutable skill view.
+7. Persist the resolved template ID, prompt digest, and selected skill names; then run the child prompt, retain its session, and update lifecycle state independently of the admission call.
 8. Attribute child usage to the parent assistant turn and persist the attribution.
 
 Children receive incremented `RLM_DEPTH`, the inherited maximum depth, and their own `RLM_SESSION_DIR`. The default maximum depth is 1, so root sessions may create children and those children may not create grandchildren unless the limit is configured higher.
+
+Template-backed child sessions persist the validated template digest, prompt digest, selected-skill source snapshots, resolved thinking level, and effective active/allowed tool policy. Resuming a retained child re-resolves the exact registered template and reapplies that policy. A missing template, changed definition or method source, unavailable tool, or incompatible runtime policy fails explicitly and requires a fresh child; Prime never silently substitutes a different persona.
 
 ## Independent Delegation
 
