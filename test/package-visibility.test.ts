@@ -1,105 +1,100 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { AuthStorage } from "../../coding-agent/src/core/auth-storage.js";
-import { ExtensionRunner } from "../../coding-agent/src/core/extensions/runner.js";
-import { ModelRegistry } from "../../coding-agent/src/core/model-registry.js";
-import { DefaultResourceLoader } from "../../coding-agent/src/core/resource-loader.js";
-import { SessionManager } from "../../coding-agent/src/core/session-manager.js";
-import { SettingsManager } from "../../coding-agent/src/core/settings-manager.js";
-import { loadSkillsFromDir } from "../../coding-agent/src/core/skills.js";
-import { createTestExtensionsResult } from "../../coding-agent/test/utilities.js";
 import personaTeams from "../extensions/persona-teams.js";
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const methodsRoot = join(packageRoot, "library/generated/methods");
 
-describe("Prime Persona Teams package visibility", () => {
+function methodSkillFiles(): string[] {
+	return readdirSync(methodsRoot, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => join(methodsRoot, entry.name, "SKILL.md"))
+		.sort();
+}
+
+function frontmatterValue(text: string, key: string): string | undefined {
+	const frontmatter = text.match(/^---\n([\s\S]*?)\n---/)?.[1];
+	if (!frontmatter) return undefined;
+	const value = frontmatter
+		.split("\n")
+		.find((line) => line.startsWith(`${key}:`))
+		?.slice(key.length + 1)
+		.trim();
+	if (!value) return value;
+	if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+		return value.slice(1, -1);
+	}
+	return value;
+}
+
+describe("Prime Persona Teams standalone package", () => {
 	it("exposes one control skill and keeps all generated methods hidden", () => {
-		const control = loadSkillsFromDir({ dir: join(packageRoot, "skills"), source: "test" });
-		const methods = loadSkillsFromDir({ dir: join(packageRoot, "library/generated/methods"), source: "test" });
-		expect([...control.diagnostics, ...methods.diagnostics]).toEqual([]);
-		const skills = [...control.skills, ...methods.skills];
-		expect(skills).toHaveLength(43);
-		expect(skills.filter((skill) => !skill.disableModelInvocation).map((skill) => skill.name)).toEqual([
-			"persona-team",
-		]);
-		expect(skills.filter((skill) => skill.name.startsWith("persona-team-") && !skill.disableModelInvocation)).toEqual(
-			[],
+		const controlText = readFileSync(join(packageRoot, "skills/persona-team/SKILL.md"), "utf8");
+		const methods = methodSkillFiles().map((filePath) => ({
+			filePath,
+			text: readFileSync(filePath, "utf8"),
+		}));
+
+		expect(frontmatterValue(controlText, "name")).toBe("persona-team");
+		expect(frontmatterValue(controlText, "disable-model-invocation")).not.toBe("true");
+		expect(methods).toHaveLength(42);
+		for (const method of methods) {
+			expect(frontmatterValue(method.text, "name")).toMatch(/^persona-team-/);
+			expect(frontmatterValue(method.text, "disable-model-invocation"), method.filePath).toBe("true");
+		}
+		expect(methods.map((method) => frontmatterValue(method.text, "description")).join("\n")).not.toContain(
+			"Engineering Manager",
 		);
-		expect(skills.map((skill) => skill.description).join("\n")).not.toContain("Engineering Manager");
 	});
 
-	it("registers ten exact persona templates whose selected methods exist", async () => {
-		const loaded = await createTestExtensionsResult([personaTeams], packageRoot);
-		const runner = new ExtensionRunner(
-			loaded.extensions,
-			loaded.runtime,
-			packageRoot,
-			SessionManager.inMemory(packageRoot),
-			ModelRegistry.create(AuthStorage.inMemory()),
-		);
+	it("registers ten exact persona templates whose selected methods exist", () => {
+		const templates: Array<Record<string, unknown>> = [];
+		const api = {
+			registerAgentTemplate(template: Record<string, unknown>) {
+				templates.push(template);
+			},
+		} as unknown as Parameters<typeof personaTeams>[0];
+		personaTeams(api);
+
 		const methods = new Set(
-			loadSkillsFromDir({ dir: join(packageRoot, "library/generated/methods"), source: "test" }).skills.map(
-				(skill) => skill.name,
-			),
+			methodSkillFiles().map((filePath) => frontmatterValue(readFileSync(filePath, "utf8"), "name")),
 		);
-		const templates = runner.getAgentTemplates();
 		expect(templates).toHaveLength(10);
 		for (const template of templates) {
 			expect(template.id).toMatch(/^prime\/persona-team\/[a-z0-9-]+$/);
-			expect(template.promptAppend.length).toBeLessThanOrEqual(6_000);
-			expect(template.skills?.include.length).toBeGreaterThan(0);
-			expect(template.skills?.include.every((name) => methods.has(name))).toBe(true);
-			expect(template.promptAppend.toLowerCase()).not.toContain("paperclip");
-			expect(template.promptAppend.toLowerCase()).not.toContain("gstack");
+			expect(String(template.promptAppend).length).toBeLessThanOrEqual(6_000);
+			const skills = template.skills as { include: string[]; exposeSelected: boolean };
+			expect(skills.include.length).toBeGreaterThan(0);
+			expect(skills.include.every((name) => methods.has(name))).toBe(true);
+			expect(String(template.promptAppend).toLowerCase()).not.toContain("paperclip");
+			expect(String(template.promptAppend).toLowerCase()).not.toContain("gstack");
 		}
 	});
 
-	it("loads through the package manifest without exposing hidden methods", async () => {
-		const tempRoot = mkdtempSync(join(tmpdir(), "prime-persona-package-"));
-		const cwd = join(tempRoot, "project");
-		const agentDir = join(tempRoot, "agent");
-		mkdirSync(cwd, { recursive: true });
-		mkdirSync(agentDir, { recursive: true });
-		try {
-			const settings = SettingsManager.create(cwd, agentDir);
-			settings.setProjectPackages([packageRoot]);
-			const loader = new DefaultResourceLoader({ cwd, agentDir, settingsManager: settings, bundledSkillsDir: null });
-			await loader.reload();
-			const skills = loader.getSkills();
-			expect(skills.diagnostics).toEqual([]);
-			const packageSkills = skills.skills.filter((skill) => skill.filePath.startsWith(packageRoot));
-			expect(packageSkills.filter((skill) => !skill.disableModelInvocation).map((skill) => skill.name)).toEqual([
-				"persona-team",
-			]);
-			expect(packageSkills.filter((skill) => skill.name.startsWith("persona-team-"))).toHaveLength(42);
-			const extensionResult = loader.getExtensions();
-			expect(extensionResult.errors).toEqual([]);
-			const runner = new ExtensionRunner(
-				extensionResult.extensions,
-				extensionResult.runtime,
-				cwd,
-				SessionManager.inMemory(cwd),
-				ModelRegistry.create(AuthStorage.create(join(agentDir, "auth.json"))),
-			);
-			expect(runner.getAgentTemplates()).toHaveLength(10);
-		} finally {
-			rmSync(tempRoot, { recursive: true, force: true });
+	it("declares Bun and references only package-local resources", () => {
+		const manifest = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")) as {
+			packageManager: string;
+			scripts: Record<string, string>;
+			pi: { extensions: string[]; skills: string[] };
+		};
+		expect(manifest.packageManager).toMatch(/^bun@/);
+		expect(manifest.scripts.test).toContain("bun run");
+		for (const resource of [...manifest.pi.extensions, ...manifest.pi.skills]) {
+			expect(existsSync(resolve(packageRoot, resource)), resource).toBe(true);
 		}
 	});
 
 	it("ships standalone active methods without broken local references", () => {
-		const methods = loadSkillsFromDir({ dir: join(packageRoot, "library/generated/methods"), source: "test" });
-		expect(methods.diagnostics).toEqual([]);
-		for (const method of methods.skills) {
-			const text = readFileSync(method.filePath, "utf8");
+		for (const filePath of methodSkillFiles()) {
+			const text = readFileSync(filePath, "utf8");
+			const name = frontmatterValue(text, "name") ?? filePath;
 			expect(text).not.toMatch(/(?:\.\/)?references\/[A-Za-z0-9_./-]+\.md/);
 			for (const [, target] of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
 				const localPath = target?.split("#", 1)[0] ?? "";
 				if (!localPath || /^(?:[a-z]+:|#)/i.test(target ?? "")) continue;
-				expect(existsSync(resolve(dirname(method.filePath), localPath)), `${method.name}: ${target}`).toBe(true);
+				expect(existsSync(resolve(dirname(filePath), localPath)), `${name}: ${target}`).toBe(true);
 			}
 		}
 	});

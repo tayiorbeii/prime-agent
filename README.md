@@ -52,6 +52,18 @@ Available IDs:
 
 Template catalogs and persona text are not appended to the parent prompt. An unknown template, missing selected skill, wildcard skill name, or unavailable required tool fails before admission. A selected hidden method is cloned into an immutable child view; parent and sibling skill records do not change.
 
+## Development
+
+This repository uses [Bun](https://bun.sh/) for JavaScript dependency management and scripts:
+
+```bash
+bun install
+bun run test:typescript
+bun run test
+```
+
+Python tooling remains managed by `uv`; `bun run test` invokes both the TypeScript and Python test suites.
+
 ## Corpus generation
 
 The provenance mirror under `library/source/upstream/` is outside every skill discovery path. Foreign multi-stage workflow sources remain source-only and are never executable methods.

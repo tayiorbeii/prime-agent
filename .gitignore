@@ -1,0 +1,6 @@
+node_modules/
+coverage/
+.DS_Store
+skills/persona-team/.venv/
+__pycache__/
+*.pyc
