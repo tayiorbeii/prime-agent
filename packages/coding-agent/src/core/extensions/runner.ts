@@ -11,6 +11,7 @@ import type { KeybindingsConfig } from "../keybindings.js";
 import type { ModelRegistry } from "../model-registry.js";
 import type { SessionManager } from "../session-manager.js";
 import type { BuildSystemPromptOptions } from "../system-prompt.js";
+import { type AgentTemplateDefinitionV1, cloneAgentTemplateDefinition } from "./agent-templates.js";
 import type {
 	BeforeAgentStartEvent,
 	BeforeAgentStartEventResult,
@@ -390,6 +391,17 @@ export class ExtensionRunner {
 			}
 		}
 		return undefined;
+	}
+
+	getAgentTemplate(id: string): Readonly<AgentTemplateDefinitionV1> | undefined {
+		const registered = this.runtime.agentTemplates.get(id);
+		return registered ? cloneAgentTemplateDefinition(registered.definition) : undefined;
+	}
+
+	getAgentTemplates(): ReadonlyArray<Readonly<AgentTemplateDefinitionV1>> {
+		return [...this.runtime.agentTemplates.values()]
+			.map((registered) => cloneAgentTemplateDefinition(registered.definition))
+			.sort((left, right) => left.id.localeCompare(right.id));
 	}
 
 	getFlags(): Map<string, ExtensionFlag> {

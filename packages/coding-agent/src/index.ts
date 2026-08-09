@@ -49,6 +49,8 @@ export { createEventBus, type EventBus, type EventBusController } from "./core/e
 export type {
 	AgentEndEvent,
 	AgentStartEvent,
+	AgentTemplateDefinitionV1,
+	AgentTemplateSkillSelectionV1,
 	AgentToolResult,
 	AgentToolUpdateCallback,
 	AppKeybinding,
@@ -150,6 +152,12 @@ export type {
 export { DefaultPackageManager } from "./core/package-manager.js";
 export type { ResourceCollision, ResourceDiagnostic, ResourceLoader } from "./core/resource-loader.js";
 export { DefaultResourceLoader, loadProjectContextFiles } from "./core/resource-loader.js";
+export {
+	type ResolvedResourceScope,
+	type ResourceScope,
+	resolveResourceScope,
+	ScopedResourceLoader,
+} from "./core/scoped-resource-loader.js";
 // SDK for programmatic usage
 export {
 	type AgentSessionCreationOptions,

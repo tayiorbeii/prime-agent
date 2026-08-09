@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added trusted extension Agent Templates for child-only RLM personas with immutable exact skill scopes, parent-bounded tool policies, and hash-verified resume compatibility.
 - Changed sent agent messages in the IPython cell UI to show only the message text with a `╰─` gutter when expanded, matching received messages, and hid the raw `agent_message.send` receipt dictionary.
 - Fixed Homebrew installs attempting to self-update their versioned Cellar keg instead of directing users to `brew upgrade prime-agent` ([#844](https://github.com/PrimeIntellect-ai/prime-agent/issues/844))
 

@@ -35,6 +35,8 @@ export { createEventBus, type EventBus, type EventBusController } from "./event-
 export {
 	type AgentEndEvent,
 	type AgentStartEvent,
+	type AgentTemplateDefinitionV1,
+	type AgentTemplateSkillSelectionV1,
 	type AgentToolResult,
 	type AgentToolUpdateCallback,
 	type BeforeAgentStartEvent,
@@ -79,6 +81,12 @@ export {
 } from "./extensions/index.js";
 export type { RefinementResult } from "./refinement/index.js";
 export type { CreateRlmSubagentRuntimeOptions, RlmSubagentRuntime, SubagentRuntimeHost } from "./rlm-runtime.js";
+export {
+	type ResolvedResourceScope,
+	type ResourceScope,
+	resolveResourceScope,
+	ScopedResourceLoader,
+} from "./scoped-resource-loader.js";
 export { SessionImportFileNotFoundError } from "./session-import-errors.js";
 export type { SessionStats } from "./session-stats.js";
 export { createSyntheticSourceInfo } from "./source-info.js";

@@ -340,6 +340,9 @@ export class AgentSessionRuntime implements SubagentRuntimeHost {
 				rlmDepth: options.rlmDepth,
 			});
 		}
+		if (options.templateMetadata) {
+			sessionManager.appendCustomEntry("prime.agent-template-resolution/v1", options.templateMetadata);
+		}
 		const runtime = await this.scopedBuild(() =>
 			createAgentSessionRuntime(this.createRuntime, {
 				cwd: sessionManager.getCwd(),
@@ -354,6 +357,7 @@ export class AgentSessionRuntime implements SubagentRuntimeHost {
 					scopedModels: options.scopedModels,
 					initialActiveToolNames: options.activeToolNames,
 					allowedToolNames: options.allowedToolNames,
+					resourceScope: options.resourceScope,
 					customTools: options.customTools,
 					includeGoals: options.includeGoals,
 					includeCompactSkill: options.includeCompactSkill,

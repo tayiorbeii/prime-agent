@@ -4,6 +4,12 @@
 
 export type { SlashCommandInfo, SlashCommandSource } from "../slash-commands.js";
 export type { SourceInfo } from "../source-info.js";
+export type {
+	AgentTemplateDefinitionV1,
+	AgentTemplateSkillSelectionV1,
+	AgentTemplateThinkingLevel,
+	RegisteredAgentTemplate,
+} from "./agent-templates.js";
 // Built-in extensions
 export {
 	createHerdrAgentStateExtension,

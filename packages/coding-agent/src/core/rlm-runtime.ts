@@ -3,6 +3,7 @@ import type { Api, Model, ServiceTier } from "@earendil-works/pi-ai";
 import type { AgentSession } from "./agent-session.js";
 import type { ToolDefinition } from "./extensions/index.js";
 import type { HostRequestHandler } from "./kernel/index.js";
+import type { PersistedResourceScopeIdentity, ResolvedResourceScope } from "./scoped-resource-loader.js";
 
 export interface RlmRunRequest {
 	prompt: string;
@@ -89,6 +90,15 @@ export function normalizeRequestedRlmSubagentModel(value: unknown): string | und
 		throw new Error("rlm.run model must not be empty");
 	}
 	return model;
+}
+
+/** Validate and normalize an orchestrator-supplied child template reference. */
+export function normalizeRequestedRlmAgentTemplate(value: unknown): string | undefined {
+	if (value === undefined) return undefined;
+	if (typeof value !== "string") throw new Error("rlm.run template must be a string");
+	const template = value.trim();
+	if (!template) throw new Error("rlm.run template must not be empty");
+	return template;
 }
 
 /** Create a readable, collision-resistant default name usable as an agent-message selector. */
@@ -202,6 +212,13 @@ export interface RlmSubagentRuntime {
 	session: AgentSession;
 }
 
+export interface RlmAgentTemplateMetadata extends PersistedResourceScopeIdentity {
+	schema: "prime.agent-template-resolution/v1";
+	thinkingLevel: ThinkingLevel;
+	activeToolNames: string[];
+	allowedToolNames?: string[];
+}
+
 export interface CreateRlmSubagentRuntimeOptions {
 	parentSession: AgentSession;
 	id: string;
@@ -220,6 +237,10 @@ export interface CreateRlmSubagentRuntimeOptions {
 	rlmDepth: number;
 	rlmMaxDepth: number;
 	rlmParentNodeId: string;
+	/** Child-only immutable resource view resolved before admission. */
+	resourceScope?: ResolvedResourceScope;
+	/** Persisted identity and digest for a resolved child template. */
+	templateMetadata?: RlmAgentTemplateMetadata;
 	/** Source of the IPython cell that spawned this subagent, for display. */
 	spawnCode?: string;
 	/** Publish the session to the parent before a host makes the runtime addressable. */
