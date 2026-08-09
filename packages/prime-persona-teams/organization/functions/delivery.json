@@ -1,0 +1,20 @@
+{
+  "schema": "prime.function/v1",
+  "id": "prime/function/delivery",
+  "label": "Bounded Delivery",
+  "lifecycle": "retained-per-task",
+  "roles": [
+    "implementation-engineer"
+  ],
+  "memory": {
+    "read": [
+      "project",
+      "function",
+      "run"
+    ],
+    "write": [
+      "function",
+      "run"
+    ]
+  }
+}

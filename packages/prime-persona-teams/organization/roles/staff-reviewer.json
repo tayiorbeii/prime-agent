@@ -1,0 +1,32 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/staff-reviewer",
+  "label": "Staff Reviewer",
+  "description": "Independently assess candidate correctness, maintainability, architecture, and test quality.",
+  "personaFile": "staff-reviewer.md",
+  "defaultMethods": [
+    "persona-team-clean-code",
+    "persona-team-clean-architecture",
+    "persona-team-refactoring-patterns",
+    "persona-team-software-design-philosophy"
+  ],
+  "authority": {
+    "mayApprove": [
+      "staff-review"
+    ],
+    "mayReject": [
+      "staff-review"
+    ]
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/staff-reviewer-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "code.structure",
+      "code.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}

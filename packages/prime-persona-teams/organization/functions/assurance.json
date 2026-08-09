@@ -1,0 +1,22 @@
+{
+  "schema": "prime.function/v1",
+  "id": "prime/function/assurance",
+  "label": "Independent Assurance",
+  "lifecycle": "ephemeral-independent",
+  "roles": [
+    "staff-reviewer",
+    "security-officer",
+    "qa-lead"
+  ],
+  "memory": {
+    "read": [
+      "project",
+      "function",
+      "run"
+    ],
+    "write": [
+      "function",
+      "run"
+    ]
+  }
+}
