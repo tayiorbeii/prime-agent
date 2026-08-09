@@ -1,0 +1,33 @@
+{
+  "schema": "prime.function/v1",
+  "id": "prime/function/planning",
+  "label": "Product and Engineering Planning",
+  "lifecycle": "retained-per-run",
+  "modes": {
+    "compact": [
+      "engineering-manager"
+    ],
+    "standard": [
+      "product-designer",
+      "engineering-manager"
+    ],
+    "rigorous": [
+      "founder-ceo",
+      "product-designer",
+      "devex-lead",
+      "engineering-manager"
+    ]
+  },
+  "memory": {
+    "read": [
+      "organization",
+      "project",
+      "function",
+      "run"
+    ],
+    "write": [
+      "function",
+      "run"
+    ]
+  }
+}

@@ -14,7 +14,7 @@
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -222,6 +222,7 @@ import {
 	createRlmListSubagentsHostHandler,
 	createRlmRunHostHandler,
 	findRlmModelMatches,
+	normalizeRequestedRlmAgentTemplate,
 	normalizeRequestedRlmSubagentModel,
 	normalizeRequestedRlmSubagentSessionName,
 	type RlmDeleteSubagentResult,
@@ -232,6 +233,7 @@ import {
 	type RlmSubagentRuntime,
 	type SubagentRuntimeHost,
 } from "./rlm-runtime.js";
+import { agentTemplateDigest, resolveResourceScope, ScopedResourceLoader } from "./scoped-resource-loader.js";
 import {
 	ActionStore,
 	type ActionTicket,
@@ -8979,6 +8981,9 @@ export class AgentSession {
 				rlmDepth: options.rlmDepth,
 			});
 		}
+		if (options.templateMetadata) {
+			childSessionManager.appendCustomEntry("prime.agent-template-resolution/v1", options.templateMetadata);
+		}
 		childSessionManager.appendModelChange(options.model.provider, options.model.id);
 		childSessionManager.appendThinkingLevelChange(options.thinkingLevel);
 		childSessionManager.appendServiceTierChange(options.serviceTier);
@@ -9013,7 +9018,9 @@ export class AgentSession {
 			cwd: this._cwd,
 			agentDir: this._agentDir,
 			scopedModels: options.scopedModels,
-			resourceLoader: this._resourceLoader,
+			resourceLoader: options.resourceScope
+				? new ScopedResourceLoader(this._resourceLoader, options.resourceScope)
+				: this._resourceLoader,
 			customTools: options.customTools,
 			modelRegistry: this._modelRegistry,
 			initialActiveToolNames: options.activeToolNames,
@@ -9612,13 +9619,42 @@ export class AgentSession {
 		kwargs: Record<string, unknown> = {},
 		spawnCode?: string,
 	): Promise<RlmSpawnHandle> {
-		const { name: rawName, model: rawModel, ...unsupported } = kwargs;
+		const { name: rawName, model: rawModel, template: rawTemplate, ...unsupported } = kwargs;
 		const unsupportedKwargs = Object.keys(unsupported);
 		if (unsupportedKwargs.length > 0) {
 			throw new Error(`Unsupported rlm.run kwargs: ${unsupportedKwargs.sort().join(", ")}`);
 		}
 		const requestedSessionName = normalizeRequestedRlmSubagentSessionName(rawName);
 		const requestedModel = normalizeRequestedRlmSubagentModel(rawModel);
+		const requestedTemplate = normalizeRequestedRlmAgentTemplate(rawTemplate);
+		const template = requestedTemplate ? this._extensionRunner.getAgentTemplate(requestedTemplate) : undefined;
+		if (requestedTemplate && !template) {
+			throw new Error(`Unknown agent template "${requestedTemplate}"`);
+		}
+		const resourceScope = template
+			? resolveResourceScope(this._resourceLoader, {
+					templateId: template.id,
+					promptAppend: template.promptAppend,
+					...(template.skills ? { skills: template.skills } : {}),
+				})
+			: undefined;
+		const availableToolNames = new Set(this.getAllTools().map((tool) => tool.name));
+		for (const toolName of [...(template?.allowedToolNames ?? []), ...(template?.activeToolNames ?? [])]) {
+			if (this._allowedToolNames && !this._allowedToolNames.has(toolName)) {
+				throw new Error(
+					`Agent template "${template?.id}" requests tool "${toolName}" outside the parent allowlist`,
+				);
+			}
+			if (!availableToolNames.has(toolName)) {
+				throw new Error(`Agent template "${template?.id}" requires unavailable tool "${toolName}"`);
+			}
+		}
+		const templateAllowedToolNames = template?.allowedToolNames ? new Set(template.allowedToolNames) : undefined;
+		for (const toolName of template?.activeToolNames ?? []) {
+			if (templateAllowedToolNames && !templateAllowedToolNames.has(toolName)) {
+				throw new Error(`Agent template "${template?.id}" activates tool "${toolName}" outside its allowlist`);
+			}
+		}
 		if (requestedSessionName) assertDirectAgentMessageTarget(requestedSessionName);
 		if (this._rlmDepth >= this._rlmMaxDepth) {
 			throw new Error(
@@ -9700,15 +9736,51 @@ export class AgentSession {
 			run.abort = () => void child.abort();
 			run.publication.resolve();
 		};
+		const inheritedOptions = this._createRlmSubagentRuntimeOptions({
+			id: childNodeId,
+			prompt,
+			sessionName,
+			spawnCode,
+			sessionDir: childSessionDir,
+			model: modelSelection.model,
+		});
+		const inheritedAllowedToolNames = inheritedOptions.allowedToolNames
+			? new Set(inheritedOptions.allowedToolNames)
+			: undefined;
+		const allowedToolNames = template?.allowedToolNames
+			? template.allowedToolNames.filter((name) => !inheritedAllowedToolNames || inheritedAllowedToolNames.has(name))
+			: inheritedOptions.allowedToolNames;
+		const allowedToolNameSet = allowedToolNames ? new Set(allowedToolNames) : undefined;
+		const requestedActiveToolNames = template?.activeToolNames
+			? [...template.activeToolNames]
+			: inheritedOptions.activeToolNames;
+		const activeToolNames = allowedToolNameSet
+			? requestedActiveToolNames.filter((name) => allowedToolNameSet.has(name))
+			: requestedActiveToolNames;
+		const thinkingLevel = template?.thinkingLevel
+			? (clampThinkingLevel(modelSelection.model, template.thinkingLevel) as ThinkingLevel)
+			: inheritedOptions.thinkingLevel;
 		const subagentOptions: CreateRlmSubagentRuntimeOptions = {
-			...this._createRlmSubagentRuntimeOptions({
-				id: childNodeId,
-				prompt,
-				sessionName,
-				spawnCode,
-				sessionDir: childSessionDir,
-				model: modelSelection.model,
-			}),
+			...inheritedOptions,
+			thinkingLevel,
+			activeToolNames,
+			allowedToolNames,
+			resourceScope,
+			...(template
+				? {
+						templateMetadata: {
+							schema: "prime.agent-template-resolution/v1" as const,
+							templateId: template.id,
+							templateSha256: agentTemplateDigest(template),
+							promptSha256: createHash("sha256").update(template.promptAppend).digest("hex"),
+							skillNames: [...(template.skills?.include ?? [])],
+							skillSnapshots: (resourceScope?.skillSnapshots ?? []).map((snapshot) => ({ ...snapshot })),
+							thinkingLevel,
+							activeToolNames: [...activeToolNames],
+							...(allowedToolNames ? { allowedToolNames: [...allowedToolNames] } : {}),
+						},
+					}
+				: {}),
 			onSessionPublished: publishChildSession,
 		};
 

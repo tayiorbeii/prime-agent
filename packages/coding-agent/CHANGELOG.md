@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added trusted extension Agent Templates for child-only RLM personas with immutable exact skill scopes, parent-bounded tool policies, and hash-verified resume compatibility.
 - Added host-managed local stdio MCP servers with serialized calls, restart handling, and cleanup on reload or session disposal.
 - Added bounded IPython output artifacts with opaque retrieval handles for oversized stdout, stderr, results, and tracebacks.
 - Added bundled `jcodemunch` and `context-mode` Python skills enabled by default through lazy host-managed stdio defaults, with HTTP overrides, curated tool surfaces, and graceful unavailable diagnostics.

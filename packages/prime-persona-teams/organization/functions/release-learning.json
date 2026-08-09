@@ -1,0 +1,22 @@
+{
+  "schema": "prime.function/v1",
+  "id": "prime/function/release-learning",
+  "label": "Release and Learning",
+  "lifecycle": "retained-per-run",
+  "roles": [
+    "release-engineer",
+    "retro-ops-manager"
+  ],
+  "memory": {
+    "read": [
+      "organization",
+      "project",
+      "function",
+      "run"
+    ],
+    "write": [
+      "function",
+      "run"
+    ]
+  }
+}

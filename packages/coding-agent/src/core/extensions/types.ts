@@ -68,6 +68,7 @@ import type {
 	IpythonToolDetails,
 	IpythonToolInput,
 } from "../tools/index.js";
+import type { AgentTemplateDefinitionV1, RegisteredAgentTemplate } from "./agent-templates.js";
 
 export type { ExecOptions, ExecResult } from "../exec.js";
 export type { BuildSystemPromptOptions } from "../system-prompt.js";
@@ -1082,6 +1083,9 @@ export interface ExtensionAPI {
 		tool: ToolDefinition<TParams, TDetails, TState>,
 	): void;
 
+	/** Register a child-only RLM agent template. Templates are never added to the root prompt. */
+	registerAgentTemplate(template: AgentTemplateDefinitionV1): void;
+
 	// =========================================================================
 	// Command, Shortcut, Flag Registration
 	// =========================================================================
@@ -1407,6 +1411,8 @@ export interface ExtensionRuntimeState {
 	getExecEnv?: () => Record<string, string | undefined> | undefined;
 	/** Provider registrations queued during extension loading, processed when runner binds */
 	pendingProviderRegistrations: Array<{ name: string; config: ProviderConfig; extensionPath: string }>;
+	/** Validated templates registered by trusted extensions in this isolated loader runtime. */
+	agentTemplates: Map<string, RegisteredAgentTemplate>;
 	/** Throws when this extension instance is stale after runtime replacement. */
 	assertActive: () => void;
 	/** Marks this extension instance as stale after runtime replacement or reload. */
@@ -1497,6 +1503,7 @@ export interface Extension {
 	sourceInfo: SourceInfo;
 	handlers: Map<string, HandlerFn[]>;
 	tools: Map<string, RegisteredTool>;
+	agentTemplates?: Map<string, RegisteredAgentTemplate>;
 	messageRenderers: Map<string, MessageRenderer>;
 	commands: Map<string, RegisteredCommand>;
 	flags: Map<string, ExtensionFlag>;

@@ -14,7 +14,8 @@ import type { SessionStartEvent, ToolDefinition } from "./extensions/index.js";
 import { McpManager } from "./mcp/mcp-manager.js";
 import { ModelRegistry } from "./model-registry.js";
 import { DefaultResourceLoader, type DefaultResourceLoaderOptions, type ResourceLoader } from "./resource-loader.js";
-import type { SubagentRuntimeHost } from "./rlm-runtime.js";
+import type { RlmAgentTemplateMetadata, SubagentRuntimeHost } from "./rlm-runtime.js";
+import { type ResolvedResourceScope, restoreResourceScope, ScopedResourceLoader } from "./scoped-resource-loader.js";
 import { type CreateAgentSessionResult, createAgentSession } from "./sdk.js";
 import type { SessionManager } from "./session-manager.js";
 import { SettingsManager } from "./settings-manager.js";
@@ -69,6 +70,8 @@ export interface AgentSessionCreationOptions {
 	customTools?: ToolDefinition[];
 	initialActiveToolNames?: string[];
 	allowedToolNames?: string[];
+	/** Immutable child-only skills and supplemental prompt resolved before admission. */
+	resourceScope?: ResolvedResourceScope;
 	includeGoals?: boolean;
 	includeCompactSkill?: boolean;
 	agentMessageController?: AgentSessionMessageController;
@@ -262,9 +265,48 @@ export async function createAgentSessionServices(
  * resolve model, thinking, tools, and other session inputs against the target
  * cwd before constructing the session.
  */
+function persistedTemplateIdentity(sessionManager: SessionManager): RlmAgentTemplateMetadata | undefined {
+	const entry = [...sessionManager.getEntries()]
+		.reverse()
+		.find(
+			(candidate) => candidate.type === "custom" && candidate.customType === "prime.agent-template-resolution/v1",
+		);
+	if (!entry || entry.type !== "custom") return undefined;
+	const data = entry.data as Partial<RlmAgentTemplateMetadata> | undefined;
+	if (
+		!data ||
+		(data as { schema?: unknown }).schema !== "prime.agent-template-resolution/v1" ||
+		typeof data.templateId !== "string" ||
+		typeof data.templateSha256 !== "string" ||
+		typeof data.promptSha256 !== "string" ||
+		!Array.isArray(data.skillNames) ||
+		!data.skillNames.every((name) => typeof name === "string") ||
+		!Array.isArray(data.skillSnapshots) ||
+		!data.skillSnapshots.every(
+			(snapshot) =>
+				typeof snapshot === "object" &&
+				snapshot !== null &&
+				typeof snapshot.name === "string" &&
+				typeof snapshot.filePath === "string" &&
+				typeof snapshot.sha256 === "string",
+		) ||
+		!(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as unknown[]).includes(data.thinkingLevel) ||
+		!Array.isArray(data.activeToolNames) ||
+		!data.activeToolNames.every((name) => typeof name === "string") ||
+		(data.allowedToolNames !== undefined &&
+			(!Array.isArray(data.allowedToolNames) || !data.allowedToolNames.every((name) => typeof name === "string")))
+	) {
+		throw new Error("Persisted agent template resolution metadata is malformed");
+	}
+	return data as RlmAgentTemplateMetadata;
+}
+
 export async function createAgentSessionFromServices(
 	options: CreateAgentSessionFromServicesOptions,
 ): Promise<CreateAgentSessionResult> {
+	const identity = persistedTemplateIdentity(options.sessionManager);
+	const resourceScope =
+		options.resourceScope ?? (identity ? restoreResourceScope(options.services.resourceLoader, identity) : undefined);
 	installAgentTraceUpload(options.sessionManager, {
 		authStorage: options.services.authStorage,
 		settingsManager: options.services.settingsManager,
@@ -275,18 +317,20 @@ export async function createAgentSessionFromServices(
 		authStorage: options.services.authStorage,
 		settingsManager: options.services.settingsManager,
 		modelRegistry: options.services.modelRegistry,
-		resourceLoader: options.services.resourceLoader,
+		resourceLoader: resourceScope
+			? new ScopedResourceLoader(options.services.resourceLoader, resourceScope)
+			: options.services.resourceLoader,
 		mcpManager: options.services.mcpManager,
 		sessionManager: options.sessionManager,
 		model: options.model,
-		thinkingLevel: options.thinkingLevel,
+		thinkingLevel: options.thinkingLevel ?? identity?.thinkingLevel,
 		serviceTier: options.serviceTier,
 		scopedModels: options.scopedModels,
 		tools: options.tools,
 		noTools: options.noTools,
 		customTools: options.customTools,
-		initialActiveToolNames: options.initialActiveToolNames,
-		allowedToolNames: options.allowedToolNames,
+		initialActiveToolNames: options.initialActiveToolNames ?? identity?.activeToolNames,
+		allowedToolNames: options.allowedToolNames ?? identity?.allowedToolNames,
 		includeGoals: options.includeGoals,
 		includeCompactSkill: options.includeCompactSkill,
 		agentMessageController: options.agentMessageController,
@@ -304,6 +348,21 @@ export async function createAgentSessionFromServices(
 		serializedRefine: options.serializedRefine,
 		initialGoal: options.initialGoal,
 	});
+	if (identity) {
+		const availableTools = new Set(result.session.getAllTools().map((tool) => tool.name));
+		const requiredTools = [...identity.activeToolNames, ...(identity.allowedToolNames ?? [])];
+		const missingTools = [...new Set(requiredTools)].filter((name) => !availableTools.has(name));
+		const actualActiveTools = new Set(result.session.getActiveToolNames());
+		const activeToolsChanged =
+			actualActiveTools.size !== identity.activeToolNames.length ||
+			identity.activeToolNames.some((name) => !actualActiveTools.has(name));
+		if (missingTools.length > 0 || activeToolsChanged || result.session.thinkingLevel !== identity.thinkingLevel) {
+			result.session.dispose();
+			throw new Error(
+				`Persisted agent template ${JSON.stringify(identity.templateId)} runtime policy is incompatible; start a fresh child`,
+			);
+		}
+	}
 	if (result.session.rlmDepth === 0 && !options.telemetryDisabled) {
 		installAgentTelemetry(result.session, {
 			agentDir: options.services.agentDir,

@@ -1,0 +1,28 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/implementation-engineer",
+  "label": "Implementation Engineer",
+  "description": "Produce a bounded candidate change for one approved task with reproducible verification evidence.",
+  "personaFile": "implementation-engineer.md",
+  "defaultMethods": [
+    "persona-team-clean-code",
+    "persona-team-refactoring-patterns",
+    "persona-team-software-design-philosophy",
+    "persona-team-pragmatic-programmer"
+  ],
+  "authority": {
+    "mayApprove": [],
+    "mayReject": []
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/implementation-engineer-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "code.structure",
+      "code.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}

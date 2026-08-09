@@ -1,0 +1,31 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/qa-lead",
+  "label": "QA Lead",
+  "description": "Independently verify user-visible acceptance, regressions, failure paths, and reproducibility.",
+  "personaFile": "qa-lead.md",
+  "defaultMethods": [
+    "persona-team-pragmatic-programmer",
+    "persona-team-release-it",
+    "persona-team-ux-heuristics"
+  ],
+  "authority": {
+    "mayApprove": [
+      "qa-review"
+    ],
+    "mayReject": [
+      "qa-review"
+    ]
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/qa-lead-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "code.structure",
+      "code.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}
