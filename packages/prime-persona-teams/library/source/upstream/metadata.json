@@ -1,0 +1,12 @@
+{
+  "schema": "prime.source-set/v1",
+  "repo": "tayiorbeii/paperclip-factory-kit",
+  "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+  "dirty": true,
+  "license": "MIT",
+  "note": "Provenance-only source mirror. It is never registered as a Prime skill and creates no runtime dependency.",
+  "dirtyPaths": [
+    "REVIEW.md"
+  ],
+  "dirtyEvidenceSha256": "99fbcc64f6f63aeaf23a645c467ba980d44195fd143a481df9f4d0e2bbd72bcb"
+}

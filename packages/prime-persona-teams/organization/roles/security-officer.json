@@ -1,0 +1,31 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/security-officer",
+  "label": "Security Officer",
+  "description": "Independently assess trust boundaries, abuse cases, data handling, and operational security.",
+  "personaFile": "security-officer.md",
+  "defaultMethods": [
+    "persona-team-clean-architecture",
+    "persona-team-ddia-systems",
+    "persona-team-domain-driven-design"
+  ],
+  "authority": {
+    "mayApprove": [
+      "security-review"
+    ],
+    "mayReject": [
+      "security-review"
+    ]
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/security-officer-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "code.structure",
+      "code.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}
