@@ -1,0 +1,17 @@
+{
+  "schema": "prime.function/v1",
+  "id": "prime/function/orchestration",
+  "label": "Team Orchestration",
+  "lifecycle": "retained-per-run",
+  "roles": [],
+  "memory": {
+    "read": [
+      "organization",
+      "project",
+      "run"
+    ],
+    "write": [
+      "run"
+    ]
+  }
+}

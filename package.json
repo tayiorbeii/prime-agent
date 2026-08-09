@@ -1,0 +1,31 @@
+{
+	"name": "@prime-agent/persona-teams",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Prime-native role personas and child-scoped method skills",
+	"keywords": [
+		"pi-package",
+		"prime-agent",
+		"personas",
+		"skills"
+	],
+	"pi": {
+		"extensions": [
+			"./extensions/persona-teams.ts"
+		],
+		"skills": [
+			"./skills/persona-team",
+			"./library/generated/methods"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*"
+	},
+	"type": "module",
+	"scripts": {
+		"test": "npm run test:typescript && npm run test:python",
+		"test:typescript": "vitest --run test/package-visibility.test.ts",
+		"test:python": "uv run --project skills/persona-team --with pytest pytest -q test/test_doctor.py",
+		"verify:corpus": "python3 scripts/generate_corpus.py --verify"
+	}
+}

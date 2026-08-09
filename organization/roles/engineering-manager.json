@@ -1,0 +1,32 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/engineering-manager",
+  "label": "Engineering Manager",
+  "description": "Convert approved intent into a bounded, dependency-aware technical plan and build queue.",
+  "personaFile": "engineering-manager.md",
+  "defaultMethods": [
+    "persona-team-domain-driven-design",
+    "persona-team-system-design",
+    "persona-team-ddia-systems",
+    "persona-team-clean-architecture"
+  ],
+  "authority": {
+    "mayApprove": [
+      "plan-to-build"
+    ],
+    "mayReject": [
+      "plan-to-build"
+    ]
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/engineering-manager-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "code.structure",
+      "code.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}

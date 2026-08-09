@@ -1,0 +1,1954 @@
+{
+  "counts": {
+    "activeMethods": 42,
+    "classified": 96,
+    "quarantinedWorkflows": 44,
+    "roles": 10,
+    "sourceSkills": 86
+  },
+  "records": [
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/devex-lead.md",
+        "sha256": "31fabc73820683fafe4326bafee7c39144d1e23031cc4bae54305f8d58265e9b"
+      },
+      "id": "source/role/devex-lead",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/devex-lead/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "c50b39e05e4ebb5ae323ed7377cb596a3ad07a57e71310266a8ca2ac179ef1cb"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/engineering-manager.md",
+        "sha256": "be6b057969672dd3afbc1501326c5d566364b4a81a6c2c508afa356659e9f6e1"
+      },
+      "id": "source/role/engineering-manager",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/engineering-manager/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "b1f3c3c79b28d992b24bfe2ceabaa2ce79d70122316a3dbbd9dd0b12fbee8849"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/founder-ceo.md",
+        "sha256": "740f999e6a8e438bf8a3fe0120a5b21f6c9acbcdba711a3880621d33bb53e7f4"
+      },
+      "id": "source/role/founder-ceo",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/founder-ceo/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "442984c94cbe798f36db062702cbec1279b8cdf9105eddeaf9b5331939d67c20"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/implementation-engineer.md",
+        "sha256": "40eac0e97e2422dbe0519c8e4908ae401ea24fd61fc33781e49741a03dfc8ebc"
+      },
+      "id": "source/role/implementation-engineer",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/implementation-engineer/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "0560bb8e587647df76274319ca477b43aad0da6bbfb033348c2aa47558980ea7"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/product-designer.md",
+        "sha256": "d8f7a04c0978df7787dc903c43be65e3e2d82ea54d869a54163857d614c8b12b"
+      },
+      "id": "source/role/product-designer",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/product-designer/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "882d7b83483002c9c8bfb45b03ad0cc070610997f5ec1f77f7b5197081618340"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/qa-lead.md",
+        "sha256": "902c243f13768ba88fda90203eae64c539d15f513469e827a975af56d913b430"
+      },
+      "id": "source/role/qa-lead",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/qa-lead/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "9f55d2499c4c9f44df394abce9ba019503bc11e4b40fc7eb650249617dc18b3e"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/release-engineer.md",
+        "sha256": "9858bf498306b0e8ea25495d2199824e7fdacbc917890b7f69bae0f79a4d807a"
+      },
+      "id": "source/role/release-engineer",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/release-engineer/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "82e09b82a6e988e0d2d400a700232c41a53672042f821554a931b624c25ab622"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/retro-ops-manager.md",
+        "sha256": "e049ad9f12ac2abd8355ccf9010c5eaefc9a5ba2a0ae58b7e7f7d47dc85a98af"
+      },
+      "id": "source/role/retro-ops-manager",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/retro-ops-manager/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "bf2acd4667dddde2ff3dfd78a7490826c94451f251b26b642e721564dc025720"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/security-officer.md",
+        "sha256": "10ab84a3f5c2807cbdc837da1125a6c0808ab3d610aa9112652ac729b38f6929"
+      },
+      "id": "source/role/security-officer",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/security-officer/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "f43e8c63eff23cbec2800b6df39ef865ad3843bf836afcf9794b2a314bdc8d5e"
+      }
+    },
+    {
+      "compatibility": "adapter-required",
+      "disposition": "neutral-compact-role",
+      "generated": {
+        "path": "organization/roles/staff-reviewer.md",
+        "sha256": "2d09b641cc717d395c87de561a23eaf4d3d42eeb5066f423c690cfafbedb8065"
+      },
+      "id": "source/role/staff-reviewer",
+      "kind": "persona",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_RUNTIME_SECTION_REMOVED",
+        "AUTHORITY_NARROWED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "agents/staff-reviewer/AGENTS.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "5bcafbea2c99415291d0f26f1837b1d5ae293f32f55d87da805eaa8fad8c8ccf"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-37signals-way.md",
+        "sha256": "17800d38c16e90f3fc5f48b59c7bf84aaf2e8a9eaa91dcf8bd636e60129957f1",
+        "wrapper": "library/generated/methods/persona-team-37signals-way/SKILL.md"
+      },
+      "id": "source/skill/37signals-way",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/37signals-way/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "9f817a6914edd18d26e344d1fc2860b3d9588a220531a2ef19910f878ceb11f2"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-blue-ocean-strategy.md",
+        "sha256": "5f53ae798babf04e399dea95632cfb89d9db7b5020bec1879b19023706db89d7",
+        "wrapper": "library/generated/methods/persona-team-blue-ocean-strategy/SKILL.md"
+      },
+      "id": "source/skill/blue-ocean-strategy",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/blue-ocean-strategy/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "cb7687daa2db7c09e244bd526241d4f570d1287cbd7d5290e247c1e3452ca322"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-clean-architecture.md",
+        "sha256": "9e094212abc813823a7d013a1060d7eac32399da69ca377ead91b618607326b5",
+        "wrapper": "library/generated/methods/persona-team-clean-architecture/SKILL.md"
+      },
+      "id": "source/skill/clean-architecture",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/clean-architecture/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "248146941bdb4992a61e6221cd2b1505d7828277548e715af424ae081f3566cf"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-clean-code.md",
+        "sha256": "5e6e11a5d099fbc0217f17a64293390f92ed97f8e64e7defeb0578b9936d8ba0",
+        "wrapper": "library/generated/methods/persona-team-clean-code/SKILL.md"
+      },
+      "id": "source/skill/clean-code",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/clean-code/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "99eae0a967e53072dc9bfe7f883c140c4f9c533b0966f919dd4a695022afb0d4"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-contagious.md",
+        "sha256": "e4cc0723788216fa46c1d6fd958c7260195f760dc39257640f16a015ffd36d38",
+        "wrapper": "library/generated/methods/persona-team-contagious/SKILL.md"
+      },
+      "id": "source/skill/contagious",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/contagious/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "c81c9fe3b621d593b577f88072f3708672d4169ba9e5d92a41d4dc7057c3f4fe"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-continuous-discovery.md",
+        "sha256": "6b600dcf246f99b3a0d0600c3af8a23c4a332c7874dce7ad7db708e67af75460",
+        "wrapper": "library/generated/methods/persona-team-continuous-discovery/SKILL.md"
+      },
+      "id": "source/skill/continuous-discovery",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/continuous-discovery/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "8b622a3829af41f59bdf3c15029b293b186d9d1177669869ddc81e41cd33b1c1"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-cro-methodology.md",
+        "sha256": "5e0f5ade4992776761c30b14b1f64d26fca78ed5d97a77a3fb0d3b2e01d32ac7",
+        "wrapper": "library/generated/methods/persona-team-cro-methodology/SKILL.md"
+      },
+      "id": "source/skill/cro-methodology",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/cro-methodology/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "f3e6c3d4a55d15e9fe7e347958986c61e7b40d872f21426a37d386c1b3ed5003"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-crossing-the-chasm.md",
+        "sha256": "63103228002e05b694f38096f30e1c969f3418ad2ac64b3140f31675634e5ab5",
+        "wrapper": "library/generated/methods/persona-team-crossing-the-chasm/SKILL.md"
+      },
+      "id": "source/skill/crossing-the-chasm",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/crossing-the-chasm/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "addac254cbb84e672ad7e04fae7769e9e31a1df352e4f71236001930be56eeed"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-ddia-systems.md",
+        "sha256": "485bb00c27938a8d6673bdf3f5cdd960b495e107fb17feeb924189e4d31441bc",
+        "wrapper": "library/generated/methods/persona-team-ddia-systems/SKILL.md"
+      },
+      "id": "source/skill/ddia-systems",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/ddia-systems/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "e08c34e464504dfa7cdb3ad228f6f471afdc6648ab8c5b7bd9395e7b0b258351"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-design-everyday-things.md",
+        "sha256": "638adb5151aacd5c46f68dcc02b5b27f0d0436bf049fe6801bb0f7037feea3d0",
+        "wrapper": "library/generated/methods/persona-team-design-everyday-things/SKILL.md"
+      },
+      "id": "source/skill/design-everyday-things",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/design-everyday-things/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "ea25b765e23c7fff564ed7be107bc76148de04fb78f0952639355373c092c0bd"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-design-sprint.md",
+        "sha256": "cd327384e6ab71ebe33d1e67049efea6ce106cd2fae571f248c1b717e50c4a77",
+        "wrapper": "library/generated/methods/persona-team-design-sprint/SKILL.md"
+      },
+      "id": "source/skill/design-sprint",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/design-sprint/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "f89d57fb7c1fcf7faa01633c4efe53e77ef82b466e87ea7d61f1d1f24bfc5574"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-domain-driven-design.md",
+        "sha256": "d905a22d62f460454fde394d30331e12832812f4fbfcc76fce86f7d3352d04e2",
+        "wrapper": "library/generated/methods/persona-team-domain-driven-design/SKILL.md"
+      },
+      "id": "source/skill/domain-driven-design",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/domain-driven-design/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "6352d45678505d457c43d98dea05397b8274fab3b5a22fcc6397969fa668308e"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-drive-motivation.md",
+        "sha256": "1ac45be434ffd7adacbbe3a176fa7e3060a35a1521d65d0af8ac85360d4bd3ff",
+        "wrapper": "library/generated/methods/persona-team-drive-motivation/SKILL.md"
+      },
+      "id": "source/skill/drive-motivation",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/drive-motivation/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "92a4320b242433f839f5428c3980bc03b2b59aefb6361487a891b9310018bfa4"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-autoplan",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-autoplan/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "73d96274c297c16545173469d51ed740c8648c3488b403719e36a74ee6ef585b"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-benchmark",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-benchmark/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "19a94b95d796d99eabfdd8b04ab4f8075cde40a05caac2f95c41811453a479b9"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-benchmark-models",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-benchmark-models/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "8406de0c7af0635629b75c08d955fc46cdbb689331d225045f6eddf9e4d023ed"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-browse",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-browse/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "d9bf75e7f6f5d6ca5fec7b09984a02066d704b306c8105c557c4f634a61063bf"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-canary",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-canary/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "c1bc5819de195b2caec129d8f416bd87a2f9e100e296daf3b2c521674fafaba0"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-careful",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-careful/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "95f71f8b75d38c59c173ffb63b5a60462ae5a4fc012fad5c8fafdae1a3b516f6"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-codex",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-codex/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "c018acefa1652c0d45fad1e666030b98b9cd91ebf9955a1bd12607994f463a27"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-context-restore",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-context-restore/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "0e313f9843fbc2e906cb6772b16c65021167fa07ec5f94fa614fa6d2463040ff"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-context-save",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-context-save/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "4c45c64831c74d2d9f50d00db46a42a0b6b9406fac779844a72505a7370c3021"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-cso",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-cso/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "ec827f872bcbe80de23aae994c937bfa3f30cbbaf8be2e34d7cc8f815a43d850"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-design-consultation",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-design-consultation/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "71fbed9173dd5a7586ca9aa56d3af91da62ba665aa8219ef8a66d68749da2cfc"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-design-html",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-design-html/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "af9c28b376d8ad810d8f60d32cdf735e5caf8593ab64dc5dad7448705320e558"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-design-review",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-design-review/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "0c76dee9a23db6505bddddaafa5ffbec899c24b030b422f03d0a81bd03b13081"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-design-shotgun",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-design-shotgun/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "8a2bb29964c3cfc99cc1f2964c8176c888c81d6ce42d5cd3cf8e62877132732b"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-devex-review",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-devex-review/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "3924a562c061a9c46b56b884267fcfcf561baad954e75a0d2a0f099738c5138d"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-document-generate",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-document-generate/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "f9f77a8e49d08e0fc69b5830f04ff3e94900a32c6118da181af1924bda84c8ff"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-document-release",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-document-release/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "01a277a0ade8fa8c8ba67117e6ebb6fb2d19a6c3f77f22fc8f446860cff8940f"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-freeze",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-freeze/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "8f268aead688de5863355f49a7ce76ac4b195c5724c071ba7b4a657c80db8aca"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-guard",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-guard/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "c0e600bd8381d02f205d8b71cfb0020a0b9cdc5720cf895d28d81becce3dc8ec"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-health",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-health/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "3f4bec3d270550dd0994584ef3c86ebd48853ca5215ef17454fefcf676e8f1f9"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-investigate",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-investigate/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "d36c2d291efaec5e8dfbcbf50f496e0ad666e4c5bf9fcc986a5e0188d968dcf8"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-land-and-deploy",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-land-and-deploy/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "ba68ba32ef56d381ec328a1cedf82c76ce96dd959734be0e86ea996289f59dfd"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-landing-report",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-landing-report/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "5033732375543b271817eb3f3e8af75455832175c3b704a44c9f055f3d12ae20"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-learn",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-learn/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "26efbfaf9616559f0bc579611dc859d0cc4d9ef4b58759ef72c65198842b3e02"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-make-pdf",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-make-pdf/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "d1e889e2ad7db7fcbe9ca9a4f5c6ac42991c09f060f8cbdb877362c5780c464b"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-office-hours",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-office-hours/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "302922a4f9a27575dd54beeb5eb27875ab67df4350cbc2c0578e9051ccdd8af1"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-open-gstack-browser",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-open-gstack-browser/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "62246caddd78895c2a2f80f9b5ff37dc5b652f12eac81a167d2177c4dcb314f7"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-pair-agent",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-pair-agent/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "eb967889d0d8eeb09a35e2957bb6687407636af879b44dd7f8d8efe169234c40"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-plan-ceo-review",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-plan-ceo-review/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "6303ca38250afebbd62f62333e7a0f5dda871c1ce719b8454a95d8f6e1498614"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-plan-design-review",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-plan-design-review/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "9bfeece8514e142794eb407022d2f6a3951ac9a649c099a9afd6092156076201"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-plan-devex-review",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-plan-devex-review/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "8d8d603e5cd59fe0e05c56ad9dc6d958412c5b6840a260e8c6de6918a9d4f068"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-plan-eng-review",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-plan-eng-review/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "82a621fdbdabe3dfbb2d133feab237b86e25352deef6f11dd81da67ed1f2c9dd"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-plan-tune",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-plan-tune/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "caae300b31c1d7d20080c18a798c873418fe3d8371844c9e1e113d03ddb35c9b"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-qa",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-qa/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "0b96b857a76fc02c9339c358010c86fc4cbc68c7bb2b05993feedeb56bc04df5"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-qa-only",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-qa-only/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "6564950dd6499fa1b14b54ce2bf536a7581c322faa59b9d6b0a1a17dfc01fc1c"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-retro",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-retro/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "417a587ee222b566231ef7eb38c2977c2d3a5c859c07d02c6b891041022be996"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-review",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-review/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "fd31ad2a6bc2d3c3cfaae1c400c45ab20f8e22dff9a8e6ee4008e09061ae4e3a"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-scrape",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-scrape/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "07017d4ef61fbd13a8da2cb3210a213e1fe1a5b2a0a6210747d81c899c80682e"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-setup-browser-cookies",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-setup-browser-cookies/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "a4720be3dacf0ecd721d619a8c9c75d1f44fbc683e7e8586ef7c2dda22e8f236"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-setup-deploy",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-setup-deploy/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "b58ef8f8d3356bdfa8841c3242909dbd2a8136b3d171f236da70ea198ffd981a"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-ship",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-ship/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "b438fe959a0c802cc6c37cdf84581e53c37a24377d7dbf5034d1a68550e60130"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-skillify",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-skillify/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "4e8c8196ace164dd443040d077379912652a95a48cf52ce72a7b0e0d5bde0223"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-sync-gbrain",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-sync-gbrain/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "e4067f9f6b67c9d83845358eef7050c00a85874cabe8bc5608242d75e72aaae9"
+      }
+    },
+    {
+      "compatibility": "workflow-rewrite",
+      "disposition": "quarantined-source-only",
+      "id": "source/skill/gstack-unfreeze",
+      "kind": "workflow-source",
+      "license": "MIT",
+      "reasonCodes": [
+        "FOREIGN_WORKFLOW_RUNTIME",
+        "HOST_STATE_MUTATION"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/gstack-unfreeze/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "2c0c30c67d9f0ed1b03d156184b60399a236b3b022cd167a954666ac0a844d81"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-high-perf-browser.md",
+        "sha256": "d5c213f50d1f0d6f68e3100cb0e5877aa5bac7d34ee47ee77964c8954d9ad570",
+        "wrapper": "library/generated/methods/persona-team-high-perf-browser/SKILL.md"
+      },
+      "id": "source/skill/high-perf-browser",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/high-perf-browser/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "cb6cedba8052f59f5070d9d556063da79b5524f41b7c95eceb9431738088c2c0"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-hooked-ux.md",
+        "sha256": "c54b0b03da2c9c152baf9e1c33612f0a00f68e5b7c1d7360a29fcca3fbe81e73",
+        "wrapper": "library/generated/methods/persona-team-hooked-ux/SKILL.md"
+      },
+      "id": "source/skill/hooked-ux",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/hooked-ux/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "d071f506e64278704b06e91f602386ba70955993238a88290149775544270209"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-hundred-million-offers.md",
+        "sha256": "aeeb4ac8f6e731768dc0dbe85a060cd26da2174d42939a978284bfd99db1751c",
+        "wrapper": "library/generated/methods/persona-team-hundred-million-offers/SKILL.md"
+      },
+      "id": "source/skill/hundred-million-offers",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/hundred-million-offers/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "9f5dc1476d41085c03dd09b649ea84659f360f025d5c990b6bd73f3a4f2ce440"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-improve-retention.md",
+        "sha256": "09ac5b8909f3b861e4d47bf6fca3ac0d8595cd7333ed397fe0cc848cb08b85e8",
+        "wrapper": "library/generated/methods/persona-team-improve-retention/SKILL.md"
+      },
+      "id": "source/skill/improve-retention",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/improve-retention/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "a6dd496b0d6589e978465ae1014ea391ae204efceddf338925ab30deadff4f6b"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-influence-psychology.md",
+        "sha256": "4f556ff81b3511f0dea37456aa3ff0919b053484de30ab4df731861d9246ae23",
+        "wrapper": "library/generated/methods/persona-team-influence-psychology/SKILL.md"
+      },
+      "id": "source/skill/influence-psychology",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/influence-psychology/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "17a41fa8284004a663b95e321a28c880d3521db86fd8391765e927f978b44e39"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-inspired-product.md",
+        "sha256": "5d4c1d2d4b243a8317834abe993685dfd7f6d40a26688aca98d719274c8b1523",
+        "wrapper": "library/generated/methods/persona-team-inspired-product/SKILL.md"
+      },
+      "id": "source/skill/inspired-product",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/inspired-product/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "6800e8e085c85ed258b91d8161533ff026537c70ad79352eeb0cea781b1b7e4f"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-ios-hig-design.md",
+        "sha256": "f8e9bf9039086d1e3cd8c068be301d351db4a220afd87677f8bee432474266c0",
+        "wrapper": "library/generated/methods/persona-team-ios-hig-design/SKILL.md"
+      },
+      "id": "source/skill/ios-hig-design",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/ios-hig-design/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "14bed7ac1a18a2085d8c46c68fcfd616b3552b4bbe477a20ba7fc7145b0a8b11"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-jobs-to-be-done.md",
+        "sha256": "10ae1781b092d6ba7f141f78c4ae9b263a8f5a24499c95b049f04c4d03e8c637",
+        "wrapper": "library/generated/methods/persona-team-jobs-to-be-done/SKILL.md"
+      },
+      "id": "source/skill/jobs-to-be-done",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/jobs-to-be-done/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "93c55779335532cfd269a4d00b1e4f66062e9c51a52eb2f2d37ca5d9b5436ac3"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-lean-startup.md",
+        "sha256": "d79db6f8b0c6f7afe9604da35e5c4995e528e8e538e85997d9df592850e12418",
+        "wrapper": "library/generated/methods/persona-team-lean-startup/SKILL.md"
+      },
+      "id": "source/skill/lean-startup",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/lean-startup/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "6605187b930dd21a8137dfc7b6bc509a72978cb563a52d6aa686242a4446a535"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-lean-ux.md",
+        "sha256": "9a4e97992b14ec1d7eb6dfe52b7cdc56f206a5afee80b0b1c2a54993d6267421",
+        "wrapper": "library/generated/methods/persona-team-lean-ux/SKILL.md"
+      },
+      "id": "source/skill/lean-ux",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/lean-ux/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "3469e3cbda23eb0475ac3b87393ed6e1907e4ed40ba90ef4a9422a4fe8906ab9"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-made-to-stick.md",
+        "sha256": "98ddc4bd423ae06a2178e0bd305c6be449bb950ea80f67d97b152f3b565e005d",
+        "wrapper": "library/generated/methods/persona-team-made-to-stick/SKILL.md"
+      },
+      "id": "source/skill/made-to-stick",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/made-to-stick/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "12dad8858c1b775e747b8aae0079ba92e5f0a59feb39b704ced97748baec9ed8"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-microinteractions.md",
+        "sha256": "968327a4bcb3b8adb4b60e333ab6733fc363ee612eee9a8fcd2920be4114c5d5",
+        "wrapper": "library/generated/methods/persona-team-microinteractions/SKILL.md"
+      },
+      "id": "source/skill/microinteractions",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/microinteractions/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "f0df3ded6b530d13c0bb8cd99fa4282d60fa3bf587abbb9e56ca10589bef9d52"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-mom-test.md",
+        "sha256": "d316eb14482f4033eede87842015296ca1fe33fb0c178b1dcfb489f12ea19aeb",
+        "wrapper": "library/generated/methods/persona-team-mom-test/SKILL.md"
+      },
+      "id": "source/skill/mom-test",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/mom-test/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "0510b179d0573429afb7242e5eb78a09835a27845ca3a94f38170bb92fb13b4e"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-negotiation.md",
+        "sha256": "4f9a64fe05666d75e502b8c48ba56a00e4d5f3a7468bb499213e5ee0fc94b155",
+        "wrapper": "library/generated/methods/persona-team-negotiation/SKILL.md"
+      },
+      "id": "source/skill/negotiation",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/negotiation/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "d1943f19b72d0434918e21207295a214a65b31e4733610e5f5a6d06fe533bea2"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-obviously-awesome.md",
+        "sha256": "f77d13db257ed49a2ab67a29d1a7213f0520e23e6755c3a449df2d40e6677317",
+        "wrapper": "library/generated/methods/persona-team-obviously-awesome/SKILL.md"
+      },
+      "id": "source/skill/obviously-awesome",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/obviously-awesome/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "75648e29544dd3ca79896630636f263747387c914329c6dc5b5fadf8b4eb99f3"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-one-page-marketing.md",
+        "sha256": "63390ed333768fed4a782a683507d4e565f2d7a950eb36c8725120abefa6d8f6",
+        "wrapper": "library/generated/methods/persona-team-one-page-marketing/SKILL.md"
+      },
+      "id": "source/skill/one-page-marketing",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/one-page-marketing/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "255ac1942b2ddc94b0b386b2c5798d7639dbf003f20dbf4f3e096235533d5ab7"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-pragmatic-programmer.md",
+        "sha256": "b1a7d30e85baf955824bb25015a9d8c60348bb73baaa0d7c572d913f80d23a54",
+        "wrapper": "library/generated/methods/persona-team-pragmatic-programmer/SKILL.md"
+      },
+      "id": "source/skill/pragmatic-programmer",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/pragmatic-programmer/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "5c9971f39371bebd43c0a706e783ebbb992116a48c01d3222a90c07327dd0d54"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-predictable-revenue.md",
+        "sha256": "ca5970dedbddfff71525ce3ca285f41891b7b75fee8eaaa314b00a223c5b9332",
+        "wrapper": "library/generated/methods/persona-team-predictable-revenue/SKILL.md"
+      },
+      "id": "source/skill/predictable-revenue",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/predictable-revenue/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "5b2ec17a528528b100457f4bf818e06ac89b208c64516b0803610e9bd93a1159"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-refactoring-patterns.md",
+        "sha256": "199da21c524a525b49f963a902cf510913918b6814f84d610be6f3a2e45f7d36",
+        "wrapper": "library/generated/methods/persona-team-refactoring-patterns/SKILL.md"
+      },
+      "id": "source/skill/refactoring-patterns",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/refactoring-patterns/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "bc5ea41f54830d8c3806aead051e7c85afea1f52464ae95ddb758822e5b427f0"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-refactoring-ui.md",
+        "sha256": "39597e06d7833cef39f725c7ba73517b81f51964318d47a2a9068c3ed9dec315",
+        "wrapper": "library/generated/methods/persona-team-refactoring-ui/SKILL.md"
+      },
+      "id": "source/skill/refactoring-ui",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/refactoring-ui/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "8e0a58425c161144535f4a82423a277592a250dcf64815b1d414904c53fca7a9"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-release-it.md",
+        "sha256": "dc89e89380a703de4af661b170f4bb4296455b209093974b8adf959bbfe9569a",
+        "wrapper": "library/generated/methods/persona-team-release-it/SKILL.md"
+      },
+      "id": "source/skill/release-it",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/release-it/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "9eb2af534f34905a4c67a00984be08506773913d96af920a98419316e443dd25"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-scorecard-marketing.md",
+        "sha256": "b33671ba2b37b0a30935f2523af613e18d093f57de3014e0208e737e33a05e78",
+        "wrapper": "library/generated/methods/persona-team-scorecard-marketing/SKILL.md"
+      },
+      "id": "source/skill/scorecard-marketing",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/scorecard-marketing/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "2a1b620e7d6f806b8f956170192d2191574866411fb73f97034bb7dc6678a119"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-software-design-philosophy.md",
+        "sha256": "5947f866706d6c0de884601d4d7f208c4f49d701e782d77018e43c8e8da316bf",
+        "wrapper": "library/generated/methods/persona-team-software-design-philosophy/SKILL.md"
+      },
+      "id": "source/skill/software-design-philosophy",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/software-design-philosophy/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "7cef6aaf28a42d4827b872e0299b261773abba09c8a39016c89adf55b0c39f20"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-storybrand-messaging.md",
+        "sha256": "5197f9673352ac1fe1f2f1d1cb7144dfeea0964ab8a35136f0633569bb93528c",
+        "wrapper": "library/generated/methods/persona-team-storybrand-messaging/SKILL.md"
+      },
+      "id": "source/skill/storybrand-messaging",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/storybrand-messaging/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "ee503e43407d3fbd0e8796e575ca4deea5b07a37f44540c68af6ae376af78721"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-system-design.md",
+        "sha256": "a01364ca1c30ae4a6781f1bfb5f6fc47708328c731398d227c79e0e1716a2cb8",
+        "wrapper": "library/generated/methods/persona-team-system-design/SKILL.md"
+      },
+      "id": "source/skill/system-design",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/system-design/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "2c5960068417c22e57f5f3fe01806628c9d663279e5c5063449a034a9ca31bd2"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-top-design.md",
+        "sha256": "b2b4cb3fa9630d031aff6ba9d9f9dec87f72a9d4432b16b62ee32f79d03d8616",
+        "wrapper": "library/generated/methods/persona-team-top-design/SKILL.md"
+      },
+      "id": "source/skill/top-design",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/top-design/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "e4ae93f97c91cfcae7767a5ae3b98489d8dbe1af11d01aa5a6cc193b398c5c06"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-traction-eos.md",
+        "sha256": "f40a24a5cc4552a2fa5991c09029932897992463a3ff987f5891b54c849bd6dc",
+        "wrapper": "library/generated/methods/persona-team-traction-eos/SKILL.md"
+      },
+      "id": "source/skill/traction-eos",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/traction-eos/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "1cf382812df37402dd07596338f53e57dbc369bb953f6b57584579c67f136cf4"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-ux-heuristics.md",
+        "sha256": "e1aecc92bd74dd7e5183a394fd96b6721f48f435f68d73115f70e82a6c79dc41",
+        "wrapper": "library/generated/methods/persona-team-ux-heuristics/SKILL.md"
+      },
+      "id": "source/skill/ux-heuristics",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/ux-heuristics/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "2e2188eaaa06c095de1c6c7ac1fbbdf3f869ee4febc07c7dc8958a7589542333"
+      }
+    },
+    {
+      "compatibility": "adapted-standalone",
+      "disposition": "generated-hidden-method",
+      "generated": {
+        "card": "library/generated/method-cards/persona-team-web-typography.md",
+        "sha256": "e6cae537f8bbcbd59d4e71573455dea550c84289d23522bcb9fbfba4eb88a281",
+        "wrapper": "library/generated/methods/persona-team-web-typography/SKILL.md"
+      },
+      "id": "source/skill/web-typography",
+      "kind": "method",
+      "license": "MIT",
+      "reasonCodes": [
+        "UNAVAILABLE_SOURCE_REFERENCES_REMOVED"
+      ],
+      "schema": "prime.method-classification/v1",
+      "source": {
+        "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+        "path": "skills/web-typography/SKILL.md",
+        "repo": "tayiorbeii/paperclip-factory-kit",
+        "sha256": "0ccda6c5b943a94eeff56ddb82bc3ba660c60a886d8657569fba55cda85fe1a6"
+      }
+    }
+  ],
+  "schema": "prime.method-corpus/v1",
+  "sourceSet": {
+    "commit": "86038facb8be556bf66fd945271eff2c51308fd1",
+    "dirty": true,
+    "license": "MIT",
+    "repo": "tayiorbeii/paperclip-factory-kit"
+  }
+}

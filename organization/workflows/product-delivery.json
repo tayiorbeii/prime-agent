@@ -1,0 +1,85 @@
+{
+  "schema": "prime.workflow/v1",
+  "id": "prime/workflow/product-delivery",
+  "initialState": "framing",
+  "terminalStates": [
+    "completed",
+    "cancelled"
+  ],
+  "states": [
+    "framing",
+    "planning",
+    "building",
+    "assurance",
+    "release-ready",
+    "released",
+    "retrospective",
+    "completed",
+    "blocked",
+    "cancelled"
+  ],
+  "transitions": [
+    {
+      "id": "framing-to-planning",
+      "from": "framing",
+      "to": "planning",
+      "requiresArtifacts": [
+        "strategic-brief"
+      ]
+    },
+    {
+      "id": "plan-to-build",
+      "from": "planning",
+      "to": "building",
+      "requiresArtifacts": [
+        "product-spec",
+        "engineering-plan",
+        "build-queue"
+      ],
+      "requiresRoles": [
+        "engineering-manager"
+      ]
+    },
+    {
+      "id": "build-to-assurance",
+      "from": "building",
+      "to": "assurance",
+      "requiresArtifacts": [
+        "candidate-implementation"
+      ]
+    },
+    {
+      "id": "assurance-to-release-ready",
+      "from": "assurance",
+      "to": "release-ready",
+      "requiresRoles": [
+        "staff-reviewer",
+        "security-officer",
+        "qa-lead"
+      ]
+    },
+    {
+      "id": "release-ready-to-released",
+      "from": "release-ready",
+      "to": "released",
+      "humanApproval": "required"
+    },
+    {
+      "id": "released-to-retrospective",
+      "from": "released",
+      "to": "retrospective",
+      "requiresArtifacts": [
+        "release-record"
+      ]
+    },
+    {
+      "id": "retrospective-to-completed",
+      "from": "retrospective",
+      "to": "completed",
+      "requiresArtifacts": [
+        "retrospective"
+      ]
+    }
+  ],
+  "note": "Declarative contract only. This package does not run lifecycle transitions or external services."
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/product-designer",
+  "label": "Product Designer",
+  "description": "Turn validated intent into a usable, testable product experience and acceptance contract.",
+  "personaFile": "product-designer.md",
+  "defaultMethods": [
+    "persona-team-inspired-product",
+    "persona-team-jobs-to-be-done",
+    "persona-team-mom-test",
+    "persona-team-lean-ux",
+    "persona-team-continuous-discovery",
+    "persona-team-design-sprint",
+    "persona-team-ux-heuristics"
+  ],
+  "authority": {
+    "mayApprove": [],
+    "mayReject": []
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/product-designer-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "content.search",
+      "code.structure",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}

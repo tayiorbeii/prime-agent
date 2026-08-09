@@ -1,0 +1,27 @@
+{
+  "schema": "prime.role/v1",
+  "id": "prime/role/founder-ceo",
+  "label": "Founder & CEO",
+  "description": "Frame the company or product problem, clarify strategic intent, and make explicit prioritization choices.",
+  "personaFile": "founder-ceo.md",
+  "defaultMethods": [
+    "persona-team-inspired-product",
+    "persona-team-jobs-to-be-done",
+    "persona-team-blue-ocean-strategy",
+    "persona-team-lean-startup"
+  ],
+  "authority": {
+    "mayApprove": [],
+    "mayReject": []
+  },
+  "workspacePolicy": "assigned-workspace-only",
+  "outputContract": "prime/artifact/founder-ceo-result/v1",
+  "contextCapabilities": {
+    "preferred": [
+      "content.search",
+      "output.materialize"
+    ],
+    "fallback": "bounded-local",
+    "degradedEvidence": "required"
+  }
+}
