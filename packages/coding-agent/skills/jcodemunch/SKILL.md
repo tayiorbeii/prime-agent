@@ -115,3 +115,25 @@ or fusion ranking, source context lines, and call-chain depth; inspect
 `list_tools()` before using them. Preserve the server's license boundary: this
 skill only exposes the allowlisted retrieval surface and does not include,
 copy, or manage the separately installed sidecar.
+
+## Transport trust and deadlines
+
+- Host configuration is authoritative. A host error or timeout fails closed, and an
+  explicitly disabled server is never replaced by a class or environment URL. Only
+  a successful empty configuration permits the documented environment fallback.
+- Direct HTTP requires HTTPS except for loopback hosts (`localhost`, `*.localhost`,
+  `127.0.0.0/8`, or `::1`). Endpoint validation happens before credentials are read.
+- Host-configured HTTP endpoints receive stored auth only when the host attests
+  `allowStoredAuth: true`, and receive an environment token only from the attested
+  `bearerTokenEnvVar`. Catalog credentials are not leaked to endpoint overrides.
+  Environment URL fallbacks similarly receive only their matching environment token.
+- Direct connect, initialize, tool discovery, and tool calls each have a bounded
+  deadline and are not automatically retried. Host-bridge requests carry an
+  absolute `deadlineEpochMs`, allowing queued work to be rejected after expiry.
+- Tool argument objects, decoded results, and discovery metadata are strict-JSON
+  validated and limited to a generous 8 MiB encoded payload. Direct HTTP also caps
+  each streamed wire response at 9 MiB, forces identity encoding, and rejects
+  compressed responses. Older MCP SDK transports that cannot accept the bounded
+  HTTP client fail closed; upgrade `mcp` rather than bypassing the limit.
+- Tool discovery is refreshed when host `generation`, endpoint, transport, or tool
+  filters change; secret header values are not retained in the cache identity.

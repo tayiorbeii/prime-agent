@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Agent, type AgentMessage } from "@earendil-works/pi-agent-core";
 import { type Context, createAssistantMessageEventStream, getModel } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentSession } from "../src/core/agent-session.js";
 import { AuthStorage } from "../src/core/auth-storage.js";
@@ -71,7 +72,14 @@ describe("rlm agent templates", () => {
 		mkdirSync(tempDir, { recursive: true });
 		extensions = await createTestExtensionsResult(
 			[
-				(pi) =>
+				(pi) => {
+					pi.registerTool({
+						name: "passive_tool",
+						label: "Passive Tool",
+						description: "Available but inactive template test tool.",
+						parameters: Type.Object({}),
+						execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {} }),
+					});
 					pi.registerAgentTemplate({
 						schema: "prime.agent-template/v1",
 						id: "prime/template/engineering-manager",
@@ -80,9 +88,10 @@ describe("rlm agent templates", () => {
 						promptAppend: sentinel,
 						thinkingLevel: "high",
 						activeToolNames: ["ipython"],
-						allowedToolNames: ["ipython"],
+						allowedToolNames: ["ipython", "passive_tool"],
 						skills: { include: ["team-system-design"], exposeSelected: true },
-					}),
+					});
+				},
 			],
 			tempDir,
 		);
@@ -141,6 +150,9 @@ describe("rlm agent templates", () => {
 		expect(child.agent.state.systemPrompt).not.toContain("team-clean-code description sentinel");
 		expect(child.thinkingLevel).toBe("high");
 		expect(child.getActiveToolNames()).toEqual(["ipython"]);
+		expect(child.getAllTools().map((tool) => tool.name)).toEqual(expect.arrayContaining(["ipython", "passive_tool"]));
+		await child.reload();
+		expect(child.getActiveToolNames()).toEqual(["ipython"]);
 		const metadata = child.sessionManager
 			.getEntries()
 			.find((entry) => entry.type === "custom" && entry.customType === "prime.agent-template-resolution/v1");
@@ -149,6 +161,8 @@ describe("rlm agent templates", () => {
 			templateId: "prime/template/engineering-manager",
 			skillNames: ["team-system-design"],
 			skillSnapshots: [{ name: "team-system-design" }],
+			activeToolNames: ["ipython"],
+			allowedToolNames: ["ipython", "passive_tool"],
 		});
 		expect((metadata.data as { templateSha256?: string }).templateSha256).toHaveLength(64);
 

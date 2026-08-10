@@ -109,8 +109,6 @@ class ContextModeTest(unittest.TestCase):
         config = {
             "type": "stdio",
             "bridge": "host",
-            "command": "secret-context-mode",
-            "env": {"TOKEN": "secret"},
         }
         with mock.patch.object(
             McpIntegration, "_resolve_host_config", new=mock.AsyncMock(return_value=config)
@@ -152,14 +150,14 @@ class ContextModeTest(unittest.TestCase):
         integration = context_mode.ContextMode()
         session = FakeSession()
 
-        async def open_session(stack):
+        async def open_session(stack, config=None):
             return session
 
         with mock.patch.object(integration, "_open_session", open_session), \
              mock.patch.object(
                  McpIntegration,
                  "_resolve_host_config",
-                 new=mock.AsyncMock(return_value={"url": "https://sidecar.test/mcp"}),
+                 new=mock.AsyncMock(return_value={"type": "http", "url": "https://sidecar.test/mcp"}),
              ):
             diagnostic = run(integration.available())
             tools = run(integration.list_tools())
@@ -201,8 +199,6 @@ class ContextModeTest(unittest.TestCase):
                 return {
                     "type": "stdio",
                     "bridge": "host",
-                    "command": "secret-context-mode",
-                    "env": {"TOKEN": "secret"},
                 }
             if req_type == "mcp.list_tools":
                 return {
@@ -335,7 +331,7 @@ class ContextModeTest(unittest.TestCase):
         integration = context_mode.ContextMode()
         session = FakeSession()
 
-        async def open_session(stack):
+        async def open_session(stack, config=None):
             return session
 
         async def host_request(request_type, payload=None):
@@ -351,6 +347,22 @@ class ContextModeTest(unittest.TestCase):
                 run(integration.ctx_purge())
         with self.assertRaisesRegex(PermissionError, "disabled"):
             run(integration.call_tool("ctx_upgrade", {}))
+
+    def test_environment_fallback_fails_closed_when_host_config_errors(self):
+        integration = context_mode.ContextMode()
+        with mock.patch.dict("os.environ", {"CONTEXT_MODE_MCP_URL": "http://localhost:7777/mcp"}), mock.patch.object(
+            integration, "_host_request", new=mock.AsyncMock(side_effect=RuntimeError("host failed"))
+        ):
+            with self.assertRaisesRegex(RuntimeError, "host failed"):
+                run(integration._resolve_config())
+
+    def test_environment_fallback_does_not_receive_host_headers_or_stored_auth(self):
+        integration = context_mode.ContextMode()
+        config = {"headers": {"Authorization": "secret", "X-Secret": "value"}}
+        with mock.patch.dict("os.environ", {"CONTEXT_MODE_MCP_URL": "http://localhost:7777/mcp"}):
+            url = integration._fallback_url()
+            self.assertEqual(integration._headers_for_config(config, url), {})
+            self.assertFalse(integration._allow_stored_auth(config, url))
 
 
 if __name__ == "__main__":

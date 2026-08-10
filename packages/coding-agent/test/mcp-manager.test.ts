@@ -130,10 +130,12 @@ describe("McpManager", () => {
 		expect(await handlers["mcp.config"]({ server: "jcodemunch" })).toEqual({
 			type: "stdio",
 			bridge: "host",
+			generation: 0,
 		});
 		expect(await handlers["mcp.config"]({ server: "context-mode" })).toEqual({
 			type: "stdio",
 			bridge: "host",
+			generation: 0,
 		});
 		manager.disposeSync();
 	});
@@ -178,6 +180,7 @@ process.stdin.on("data", (chunk) => {
 			expect(await manager.hostHandlers()["mcp.config"]({ server: "jcodemunch" })).toEqual({
 				type: "stdio",
 				bridge: "host",
+				generation: 0,
 			});
 			expect(() => readFileSync(marker, "utf8")).toThrow();
 			expect((await manager.hostHandlers()["mcp.list_tools"]({ server: "jcodemunch" })).tools).toEqual([
@@ -259,11 +262,14 @@ process.stdin.on("data", (chunk) => {
 		});
 		const handlers = manager.hostHandlers();
 		expect(await handlers["mcp.config"]({ server: "jcodemunch" })).toEqual({
+			type: "http",
 			url: "https://proxy.test/jcodemunch",
+			allowStoredAuth: false,
 			enabledTools: ["search_symbols"],
 			disabledTools: ["get_blast_radius"],
+			generation: 0,
 		});
-		expect(await handlers["mcp.config"]({ server: "context-mode" })).toEqual({ enabled: false });
+		expect(await handlers["mcp.config"]({ server: "context-mode" })).toEqual({ enabled: false, generation: 0 });
 		expect(manager.listStatus().find((status) => status.server === "context-mode")?.enabled).toBe(false);
 		manager.disposeSync();
 	});
@@ -282,6 +288,25 @@ process.stdin.on("data", (chunk) => {
 
 		const status = manager.listStatus().find((s) => s.server === "linear");
 		expect(status?.enabled).toBe(true);
+	});
+
+	it("attests stored OAuth and API-key auth only for official catalog endpoints", async () => {
+		authStorage.set("mcp:linear", {
+			type: "oauth",
+			access: "oauth-token",
+			refresh: "refresh",
+			expires: Date.now() + 3_600_000,
+		});
+		authStorage.set("mcp:notion", { type: "api_key", key: "official-api-key" });
+		const handlers = new McpManager({ authStorage }).hostHandlers();
+		expect(await handlers["mcp.config"]({ server: "linear" })).toMatchObject({
+			type: "http",
+			allowStoredAuth: true,
+		});
+		expect(await handlers["mcp.config"]({ server: "notion" })).toMatchObject({
+			type: "http",
+			allowStoredAuth: true,
+		});
 	});
 
 	it("registers an OAuth provider per built-in integration", () => {
@@ -366,12 +391,20 @@ process.stdin.on("data", (chunk) => {
 		});
 		const handlers = manager.hostHandlers();
 		expect(await handlers["mcp.config"]({ server: "linear" })).toEqual({
+			type: "http",
 			url: "https://proxy.test/mcp",
+			allowStoredAuth: false,
 			headers: { "X-Extra": "1" },
 			enabledTools: ["allowed"],
 			disabledTools: ["blocked"],
+			generation: 0,
 		});
-		expect(await handlers["mcp.config"]({ server: "notion" })).toEqual({ url: "https://mcp.notion.com/mcp" });
+		expect(await handlers["mcp.config"]({ server: "notion" })).toEqual({
+			type: "http",
+			url: "https://mcp.notion.com/mcp",
+			allowStoredAuth: true,
+			generation: 0,
+		});
 	});
 
 	it("mcp.config denies an explicitly disabled user server", async () => {
@@ -381,10 +414,15 @@ process.stdin.on("data", (chunk) => {
 				jcodemunch: { type: "http", url: "https://sidecar.test/mcp", enabled: false },
 			}),
 		});
-		expect(await manager.hostHandlers()["mcp.config"]({ server: "jcodemunch" })).toEqual({ enabled: false });
+		expect(await manager.hostHandlers()["mcp.config"]({ server: "jcodemunch" })).toEqual({
+			type: "http",
+			enabled: false,
+			allowStoredAuth: false,
+			generation: 0,
+		});
 	});
 
-	it("does not treat an oauth override of a catalog name as authed via the official stored cred", () => {
+	it("does not expose official stored auth to a catalog-name URL override", async () => {
 		// Pre-existing official Linear cred from a prior login.
 		authStorage.set("mcp:linear", {
 			type: "oauth",
@@ -396,11 +434,17 @@ process.stdin.on("data", (chunk) => {
 			authStorage,
 			getUserServers: () => ({ linear: { type: "http", url: "https://proxy.test/mcp", oauth: true } }),
 		});
-		// Must NOT be enabled — else the official token would be sent to the override URL.
+		// Must NOT be enabled or authorized to read stored auth — otherwise the
+		// official token could be sent to the override URL.
 		expect(manager.listStatus().find((s) => s.server === "linear")?.enabled).toBe(false);
+		expect(await manager.hostHandlers()["mcp.config"]({ server: "linear" })).toMatchObject({
+			type: "http",
+			url: "https://proxy.test/mcp",
+			allowStoredAuth: false,
+		});
 	});
 
-	it("honors a bearer-token env var for user-declared servers", () => {
+	it("returns the intended bearer-token env source for user-declared servers", async () => {
 		process.env.MY_MCP_TOKEN = "secret";
 		try {
 			const manager = new McpManager({
@@ -411,6 +455,12 @@ process.stdin.on("data", (chunk) => {
 			});
 			const status = manager.listStatus().find((s) => s.server === "custom");
 			expect(status?.enabled).toBe(true);
+			expect(await manager.hostHandlers()["mcp.config"]({ server: "custom" })).toMatchObject({
+				type: "http",
+				url: "https://example.test/mcp",
+				bearerTokenEnvVar: "MY_MCP_TOKEN",
+				allowStoredAuth: false,
+			});
 		} finally {
 			delete process.env.MY_MCP_TOKEN;
 		}
@@ -506,7 +556,11 @@ process.stdin.on("data", (chunk) => {
 		});
 		managers.add(manager);
 		const handlers = manager.hostHandlers();
-		expect(await handlers["mcp.config"]({ server: "local" })).toEqual({ type: "stdio", bridge: "host" });
+		expect(await handlers["mcp.config"]({ server: "local" })).toEqual({
+			type: "stdio",
+			bridge: "host",
+			generation: 0,
+		});
 		expect(() => readFileSync(marker, "utf8")).toThrow();
 
 		expect((await handlers["mcp.list_tools"]({ server: "local" })).tools).toEqual([
@@ -628,6 +682,75 @@ process.stdin.on("data", (chunk) => {
 		}
 	});
 
+	it("advances generation when discovery succeeds after an automatic restart", async () => {
+		const manager = new McpManager({
+			authStorage,
+			getUserServers: () => ({ local: { type: "stdio", command: process.execPath } }),
+		});
+		const client = new StdioMcpClient({
+			server: "local",
+			command: process.execPath,
+			args: [],
+			cwd: tempDir,
+			env: process.env,
+		});
+		const listTools = vi
+			.spyOn(client, "listTools")
+			.mockRejectedValueOnce(new StdioMcpTransportError("discovery transport failed"))
+			.mockResolvedValueOnce([{ name: "after-restart" }]);
+		const restart = vi.spyOn(client, "restart").mockImplementation(async () => {
+			(client as unknown as { invalidateLifecycle: () => void }).invalidateLifecycle();
+		});
+		// This injected test client mirrors the manager callback normally supplied
+		// by getStdioClient().
+		(client as unknown as { options: { onLifecycleInvalidated?: () => void } }).options.onLifecycleInvalidated =
+			() => {
+				(manager as unknown as { lifecycleGeneration: number }).lifecycleGeneration += 1;
+			};
+		(manager as unknown as { stdioClients: Map<string, StdioMcpClient> }).stdioClients.set("local", client);
+		try {
+			expect(await manager.hostHandlers()["mcp.list_tools"]({ server: "local" })).toEqual({
+				tools: [{ name: "after-restart" }],
+			});
+			expect(listTools).toHaveBeenCalledTimes(2);
+			expect(restart).toHaveBeenCalledTimes(1);
+			expect(await manager.hostHandlers()["mcp.config"]({ server: "local" })).toMatchObject({ generation: 1 });
+		} finally {
+			await manager.dispose();
+		}
+	});
+
+	it("does not restart a sidecar when the deadline expires during retry backoff", async () => {
+		const manager = new McpManager({
+			authStorage,
+			getUserServers: () => ({ local: { type: "stdio", command: process.execPath } }),
+		});
+		const client = new StdioMcpClient({
+			server: "local",
+			command: process.execPath,
+			args: [],
+			cwd: tempDir,
+			env: process.env,
+		});
+		vi.spyOn(client, "callTool").mockRejectedValue(
+			new StdioMcpRequestNotSentError("MCP server local is not running"),
+		);
+		const restart = vi.spyOn(client, "restart").mockResolvedValue(undefined);
+		(manager as unknown as { stdioClients: Map<string, StdioMcpClient> }).stdioClients.set("local", client);
+		try {
+			await expect(
+				manager.hostHandlers()["mcp.call_tool"]({
+					server: "local",
+					tool: "mutate",
+					deadlineEpochMs: Date.now() + 25,
+				}),
+			).rejects.toThrow("deadline expired before sidecar dispatch");
+			expect(restart).not.toHaveBeenCalled();
+		} finally {
+			await manager.dispose();
+		}
+	});
+
 	it("retries a call when the request was definitely not sent", async () => {
 		const manager = new McpManager({
 			authStorage,
@@ -657,6 +780,29 @@ process.stdin.on("data", (chunk) => {
 		}
 	});
 
+	it("caps an in-flight response wait to the propagated deadline and terminates the sidecar", async () => {
+		const pidFile = join(tempDir, "deadline-response-pid");
+		const executable = join(tempDir, "deadline-response-server.mjs");
+		writeMcpServerExecutable(executable, ["slow"], { callDelayMs: 5_000, pidFile });
+		const client = new StdioMcpClient({
+			server: "deadline-response",
+			command: executable,
+			args: [],
+			cwd: tempDir,
+			env: process.env,
+		});
+		try {
+			await client.listTools();
+			const pid = Number(readFileSync(pidFile, "utf8"));
+			const startedAt = Date.now();
+			await expect(client.callTool("slow", {}, Date.now() + 75)).rejects.toThrow("timed out during tools/call");
+			expect(Date.now() - startedAt).toBeLessThan(500);
+			await waitForProcessExit(pid, 3_000);
+		} finally {
+			await client.dispose();
+		}
+	});
+
 	it("does not retry a possibly-delivered timed-out tool call", async () => {
 		const counterFile = join(tempDir, "tool-calls");
 		const serverScript = join(tempDir, "slow-stdio-server.mjs");
@@ -668,17 +814,22 @@ process.stdin.on("data", (chunk) => {
 				local: { type: "stdio", command: process.execPath, args: [serverScript], cwd: tempDir },
 			}),
 		});
-		const client = new StdioMcpClient({
+		const clientOptions = {
 			server: "local",
 			command: process.execPath,
 			args: [serverScript],
 			cwd: tempDir,
 			env: process.env,
-			callTimeoutMs: 30,
-		});
+			callTimeoutMs: 30_000,
+		};
+		const client = new StdioMcpClient(clientOptions);
 		const restart = vi.spyOn(client, "restart");
 		(manager as unknown as { stdioClients: Map<string, StdioMcpClient> }).stdioClients.set("local", client);
 		try {
+			// Separate process-start/initialize timing from the short timeout whose
+			// ambiguous post-write behavior this regression is asserting.
+			await client.listTools();
+			clientOptions.callTimeoutMs = 30;
 			await expect(manager.hostHandlers()["mcp.call_tool"]({ server: "local", tool: "allowed" })).rejects.toThrow(
 				"timed out during tools/call",
 			);
@@ -1012,9 +1163,186 @@ process.stdin.on("data", () => process.stdout.write(JSON.stringify({ id: 1, resu
 			env: process.env,
 		});
 		try {
-			await expect(client.listTools()).rejects.toThrow("invalid response");
+			await expect(client.listTools()).rejects.toThrow("invalid JSON-RPC version");
 		} finally {
 			await client.dispose();
 		}
+	});
+
+	it("includes and advances config generation across refresh and explicit restart", async () => {
+		const executable = join(tempDir, "generation-server.mjs");
+		writeMcpServerExecutable(executable, ["ok"]);
+		const manager = new McpManager({
+			authStorage,
+			cwd: tempDir,
+			getUserServers: () => ({ local: { type: "stdio", command: executable } }),
+		});
+		managers.add(manager);
+		let handlers = manager.hostHandlers();
+		expect(await handlers["mcp.config"]({ server: "local" })).toMatchObject({ generation: 0 });
+		manager.refresh();
+		handlers = manager.hostHandlers();
+		expect(await handlers["mcp.config"]({ server: "local" })).toMatchObject({ generation: 1 });
+		expect(await handlers["mcp.restart"]({ server: "local" })).toMatchObject({ generation: 2 });
+		expect(await handlers["mcp.config"]({ server: "local" })).toMatchObject({ generation: 2 });
+		expect(await handlers["mcp.config"]({ server: "missing" })).toEqual({ generation: 2 });
+	});
+
+	it("advances generation when protocol taint implicitly replaces the process", async () => {
+		const executable = join(tempDir, "taint-generation-server.mjs");
+		const countFile = join(tempDir, "taint-generation-count");
+		writeFileSync(
+			executable,
+			String.raw`#!/usr/bin/env node
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+const countFile = ${JSON.stringify(countFile)};
+const processNumber = existsSync(countFile) ? Number(readFileSync(countFile, "utf8")) + 1 : 1;
+writeFileSync(countFile, String(processNumber));
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", chunk => {
+  input += chunk;
+  while (input.includes("\n")) {
+    const index = input.indexOf("\n");
+    const line = input.slice(0, index); input = input.slice(index + 1);
+    if (!line) continue;
+    const message = JSON.parse(line);
+    if (message.method === "initialize") {
+      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "generation", version: "1" } } }) + "\n");
+    } else if (message.method === "tools/list") {
+      if (processNumber === 1) process.stdout.write(JSON.stringify({ jsonrpc: "1.0", id: message.id, result: { tools: [] } }) + "\n");
+      else process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "fresh" }] } }) + "\n");
+    }
+  }
+});
+`,
+		);
+		chmodSync(executable, 0o755);
+		const manager = new McpManager({
+			authStorage,
+			cwd: tempDir,
+			getUserServers: () => ({ local: { type: "stdio", command: executable } }),
+		});
+		managers.add(manager);
+		const handlers = manager.hostHandlers();
+		await expect(handlers["mcp.list_tools"]({ server: "local" })).rejects.toThrow("invalid JSON-RPC version");
+		expect(await handlers["mcp.config"]({ server: "local" })).toMatchObject({ generation: 1 });
+		expect(await handlers["mcp.list_tools"]({ server: "local" })).toEqual({ tools: [{ name: "fresh" }] });
+		expect(readFileSync(countFile, "utf8")).toBe("2");
+		expect(await handlers["mcp.config"]({ server: "local" })).toMatchObject({ generation: 1 });
+	});
+
+	it("does not dispatch a queued tool call after its propagated deadline", async () => {
+		const executable = join(tempDir, "deadline-server.mjs");
+		const counter = join(tempDir, "deadline-counter");
+		writeMcpServerExecutable(executable, ["first", "second"], {
+			callDelayMs: 150,
+			callCounterFile: counter,
+		});
+		const manager = new McpManager({
+			authStorage,
+			cwd: tempDir,
+			getUserServers: () => ({ local: { type: "stdio", command: executable } }),
+		});
+		managers.add(manager);
+		const call = manager.hostHandlers()["mcp.call_tool"];
+		const first = call({ server: "local", tool: "first", arguments: {} });
+		await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 25));
+		const second = call({
+			server: "local",
+			tool: "second",
+			arguments: {},
+			deadlineEpochMs: Date.now() + 25,
+		});
+		await expect(first).resolves.toMatchObject({ result: { content: [] } });
+		await expect(second).rejects.toThrow("deadline expired before sidecar dispatch");
+		expect(readFileSync(counter, "utf8").trim().split("\n")).toEqual(["first"]);
+	});
+
+	it("rechecks a tool-call deadline after slow startup before writing the mutating request", async () => {
+		const executable = join(tempDir, "slow-startup-deadline.mjs");
+		const methodsFile = join(tempDir, "slow-startup-methods");
+		writeFileSync(
+			executable,
+			String.raw`#!/usr/bin/env node
+import { appendFileSync } from "node:fs";
+const methodsFile = ${JSON.stringify(methodsFile)};
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", chunk => {
+  input += chunk;
+  while (input.includes("\n")) {
+    const index = input.indexOf("\n");
+    const line = input.slice(0, index); input = input.slice(index + 1);
+    if (!line) continue;
+    const message = JSON.parse(line);
+    appendFileSync(methodsFile, String(message.method) + "\n");
+    if (message.method === "initialize") {
+      setTimeout(() => process.stdout.write(JSON.stringify({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "slow", version: "1" } }
+      }) + "\n"), 100);
+    } else if (message.method === "tools/call") {
+      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [] } }) + "\n");
+    }
+  }
+});
+`,
+		);
+		chmodSync(executable, 0o755);
+		const manager = new McpManager({
+			authStorage,
+			cwd: tempDir,
+			getUserServers: () => ({ local: { type: "stdio", command: executable } }),
+		});
+		managers.add(manager);
+		await expect(
+			manager.hostHandlers()["mcp.call_tool"]({
+				server: "local",
+				tool: "mutate",
+				arguments: {},
+				deadlineEpochMs: Date.now() + 30,
+			}),
+		).rejects.toThrow("deadline expired before tools/call request write");
+		await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 25));
+		expect(readFileSync(methodsFile, "utf8").trim().split("\n")).not.toContain("tools/call");
+	});
+
+	it("dispatches an argument object at the 8 MiB boundary with envelope headroom", async () => {
+		const executable = join(tempDir, "large-argument-server.mjs");
+		const counter = join(tempDir, "large-argument-counter");
+		writeMcpServerExecutable(executable, ["large"], { callCounterFile: counter });
+		const manager = new McpManager({
+			authStorage,
+			cwd: tempDir,
+			getUserServers: () => ({ local: { type: "stdio", command: executable } }),
+		});
+		managers.add(manager);
+		const arguments_ = { value: "x".repeat(8_388_580) };
+		expect(Buffer.byteLength(JSON.stringify(arguments_), "utf8")).toBeLessThanOrEqual(8_388_608);
+		await expect(
+			manager.hostHandlers()["mcp.call_tool"]({ server: "local", tool: "large", arguments: arguments_ }),
+		).resolves.toMatchObject({ result: { content: [] } });
+		expect(readFileSync(counter, "utf8").trim()).toBe("large");
+	});
+
+	it("validates bridge deadlines and bounds tool arguments before enqueueing", async () => {
+		const manager = new McpManager({
+			authStorage,
+			getUserServers: () => ({ local: { type: "stdio", command: "unused" } }),
+		});
+		managers.add(manager);
+		const handlers = manager.hostHandlers();
+		await expect(handlers["mcp.list_tools"]({ server: "local", deadlineEpochMs: "soon" })).rejects.toThrow(
+			"deadlineEpochMs must be a non-negative safe integer",
+		);
+		await expect(
+			handlers["mcp.call_tool"]({
+				server: "local",
+				tool: "large",
+				arguments: { value: "x".repeat(8_388_608) },
+			}),
+		).rejects.toThrow("mcp.call_tool arguments are");
 	});
 });

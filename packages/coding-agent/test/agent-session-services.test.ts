@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerFauxProvider } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
 import { AGENT_MESSAGE_SKILL_NAME, type AgentSessionMessageController } from "../src/core/agent-messages.js";
 import { AGENT_OBSERVE_SKILL_NAME, type AgentObserveController } from "../src/core/agent-observe.js";
@@ -50,15 +51,25 @@ describe("createAgentSessionFromServices", () => {
 				noPromptTemplates: true,
 				noThemes: true,
 				extensionFactories: [
-					(pi) =>
+					(pi) => {
+						pi.registerTool({
+							name: "passive_tool",
+							label: "Passive Tool",
+							description: "Available but inactive template test tool.",
+							parameters: Type.Object({}),
+							execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {} }),
+						});
 						pi.registerAgentTemplate({
 							schema: "prime.agent-template/v1",
 							id: "prime/template/planner",
 							label: "Planner",
 							description: "Plans bounded changes.",
 							promptAppend: "RESTORED_PERSONA_SENTINEL",
+							activeToolNames: ["ipython"],
+							allowedToolNames: ["ipython", "passive_tool"],
 							skills: { include: [selectedSkill.name], exposeSelected: true },
-						}),
+						});
+					},
 				],
 				skillsOverride: () => ({ skills: [selectedSkill], diagnostics: [] }),
 			},
@@ -83,12 +94,17 @@ describe("createAgentSessionFromServices", () => {
 			skillSnapshots: scope.skillSnapshots.map((snapshot) => ({ ...snapshot })),
 			thinkingLevel: "off",
 			activeToolNames: ["ipython"],
-			allowedToolNames: ["ipython"],
+			allowedToolNames: ["ipython", "passive_tool"],
 		});
 		const { session } = await createAgentSessionFromServices({ services, sessionManager });
 		try {
 			expect(session.agent.state.systemPrompt).toContain("RESTORED_PERSONA_SENTINEL");
 			expect(session.agent.state.systemPrompt).toContain("selected method sentinel");
+			expect(session.getActiveToolNames()).toEqual(["ipython"]);
+			expect(session.getAllTools().map((tool) => tool.name)).toEqual(
+				expect.arrayContaining(["ipython", "passive_tool"]),
+			);
+			await session.reload();
 			expect(session.getActiveToolNames()).toEqual(["ipython"]);
 			expect(session.thinkingLevel).toBe("off");
 		} finally {

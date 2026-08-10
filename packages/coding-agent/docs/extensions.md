@@ -1296,7 +1296,9 @@ A parent selects the template explicitly:
 await rlm("review the candidate", template="acme/template/security-reviewer")
 ```
 
-Prime validates the selected skills and tools before child admission. The prompt append and selected hidden skills exist only in that child. A template cannot expand the parent's hard tool allowlist. Omitting `template` preserves ordinary RLM behavior.
+Prime validates the selected skills and tools before child admission. `allowedToolNames` limits which tools are available to the child; it does not activate them. `activeToolNames` remains the explicit active subset across admission, reload, and resume. The prompt append and selected hidden skills exist only in that child. A template cannot expand the parent's hard tool allowlist. Omitting `template` preserves ordinary RLM behavior.
+
+The persisted template resolution records SHA-256 identities for the template, prompt, and each selected skill package. Skill package identity covers deterministically ordered package files, including Python sources, sourceless bytecode, `__pycache__` bytecode, project metadata, scripts, and method assets. Non-executable tool caches and VCS metadata are excluded. Executable dependency roots (`.nox`, `.tox`, `.venv`, `venv`, and `node_modules`) are rejected whether they are the package root or a descendant; unresolved symlinks and symlinks escaping the package root are also rejected rather than silently excluded or followed.
 
 ### pi.sendMessage(message, options?)
 

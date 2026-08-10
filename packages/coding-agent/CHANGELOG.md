@@ -7,6 +7,8 @@
 - Added bounded IPython output artifacts with opaque retrieval handles for oversized stdout, stderr, results, and tracebacks.
 - Added bundled `jcodemunch` and `context-mode` Python skills enabled by default through lazy host-managed stdio defaults, with HTTP overrides, curated tool surfaces, and graceful unavailable diagnostics.
 - Fixed host-managed stdio MCP sidecars crashing on closed stdin, retrying possibly delivered tool calls, accepting invalid handshakes/settings, or returning before process cleanup completed.
+- Hardened MCP policy and transport boundaries with fail-closed host configuration, generation-bound discovery, HTTPS/credential-source checks, bounded direct and stdio payloads, queued dispatch deadlines, protocol tainting, and redacted diagnostics.
+- Fixed Agent Templates activating every allowed tool instead of the explicit active subset, and expanded retained-child skill identity from `SKILL.md` alone to deterministic bounded package-content snapshots.
 - Fixed Python host bridge requests waiting forever or leaking comms after timeouts and cancellation, and corrected the bundled Context Mode file-processing example.
 - Fixed bounded IPython artifacts using unbounded append/search memory, rescanning from byte zero, leaking failed captures, publishing partial artifacts, or splitting Unicode boundaries.
 - Fixed strict context routing bypasses around fallback guards, descriptor redirects, unbounded pipeline tails, and mixed Python reads while allowing scalar reductions.
