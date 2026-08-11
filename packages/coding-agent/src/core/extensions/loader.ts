@@ -196,6 +196,10 @@ function createExtensionAPI(
 			runtime.refreshTools();
 		},
 
+		getHostCapabilities() {
+			return Object.freeze({ agentTemplateSkillEnforcementV1: true as const });
+		},
+
 		registerAgentTemplate(template): void {
 			runtime.assertActive();
 			const definition = validateAgentTemplateDefinition(template);

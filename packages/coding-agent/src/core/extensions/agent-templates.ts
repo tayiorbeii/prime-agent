@@ -5,6 +5,15 @@ export interface AgentTemplateSkillSelectionV1 {
 	exposeSelected?: boolean;
 }
 
+export interface AgentTemplateSkillEnforcementV1 {
+	schema: "prime.skill-enforcement/v1";
+	mode: "required";
+	requireActivation: true;
+	requireDisposition: true;
+	allowedDispositions: Array<"applied" | "not_applicable">;
+	maxRepairTurns: number;
+}
+
 export interface AgentTemplateDefinitionV1 {
 	schema: "prime.agent-template/v1";
 	id: string;
@@ -15,6 +24,7 @@ export interface AgentTemplateDefinitionV1 {
 	activeToolNames?: string[];
 	allowedToolNames?: string[];
 	skills?: AgentTemplateSkillSelectionV1;
+	skillEnforcement?: AgentTemplateSkillEnforcementV1;
 	metadata?: Record<string, unknown>;
 }
 
@@ -74,6 +84,52 @@ function deepFreeze<T>(value: T): T {
 	return value;
 }
 
+function normalizeSkillEnforcement(
+	value: AgentTemplateSkillEnforcementV1 | undefined,
+	includedSkills: string[] | undefined,
+): AgentTemplateSkillEnforcementV1 | undefined {
+	if (value === undefined) return undefined;
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		throw new Error("Agent template skillEnforcement must be an object");
+	}
+	if (value.schema !== "prime.skill-enforcement/v1") {
+		throw new Error('Agent template skillEnforcement.schema must be "prime.skill-enforcement/v1"');
+	}
+	if (value.mode !== "required") {
+		throw new Error('Agent template skillEnforcement.mode must be "required"');
+	}
+	if (value.requireActivation !== true) {
+		throw new Error("Agent template skillEnforcement.requireActivation must be true");
+	}
+	if (value.requireDisposition !== true) {
+		throw new Error("Agent template skillEnforcement.requireDisposition must be true");
+	}
+	if (
+		!Array.isArray(value.allowedDispositions) ||
+		value.allowedDispositions.length !== 2 ||
+		value.allowedDispositions[0] !== "applied" ||
+		value.allowedDispositions[1] !== "not_applicable"
+	) {
+		throw new Error(
+			'Agent template skillEnforcement.allowedDispositions must be ["applied", "not_applicable"]',
+		);
+	}
+	if (!Number.isSafeInteger(value.maxRepairTurns) || value.maxRepairTurns < 0) {
+		throw new Error("Agent template skillEnforcement.maxRepairTurns must be a non-negative safe integer");
+	}
+	if (!includedSkills || includedSkills.length === 0) {
+		throw new Error("Agent template skillEnforcement requires at least one exact skills.include entry");
+	}
+	return {
+		schema: "prime.skill-enforcement/v1",
+		mode: "required",
+		requireActivation: true,
+		requireDisposition: true,
+		allowedDispositions: ["applied", "not_applicable"],
+		maxRepairTurns: value.maxRepairTurns,
+	};
+}
+
 export function validateAgentTemplateDefinition(
 	definition: AgentTemplateDefinitionV1,
 ): Readonly<AgentTemplateDefinitionV1> {
@@ -106,6 +162,7 @@ export function validateAgentTemplateDefinition(
 	if (definition.skills?.exposeSelected !== undefined && typeof definition.skills.exposeSelected !== "boolean") {
 		throw new Error("Agent template skills.exposeSelected must be boolean");
 	}
+	const skillEnforcement = normalizeSkillEnforcement(definition.skillEnforcement, includedSkills);
 	if (
 		definition.metadata !== undefined &&
 		(typeof definition.metadata !== "object" || definition.metadata === null || Array.isArray(definition.metadata))
@@ -131,6 +188,7 @@ export function validateAgentTemplateDefinition(
 							: { exposeSelected: definition.skills.exposeSelected }),
 					},
 				}),
+		...(skillEnforcement === undefined ? {} : { skillEnforcement }),
 		...(definition.metadata === undefined ? {} : { metadata: structuredClone(definition.metadata) }),
 	};
 	return deepFreeze(normalized);

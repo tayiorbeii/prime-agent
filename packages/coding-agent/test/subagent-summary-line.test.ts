@@ -46,6 +46,9 @@ describe("SubagentSummaryLine", () => {
 			child("heartbeat", "done", { activeSessionId: "heartbeat-session" }),
 			child("idle-done", "done", { activeSessionId: "idle-done-session" }),
 			child("idle-error", "error", { activeSessionId: "idle-error-session" }),
+			child("idle-enforcement-failed", "enforcement_failed", {
+				activeSessionId: "idle-enforcement-failed-session",
+			}),
 			child("inactive-done", "done"),
 			child("inactive-error", "error"),
 			child("cancelled", "cancelled"),
@@ -53,9 +56,9 @@ describe("SubagentSummaryLine", () => {
 		];
 
 		expect(countDirectSubagentStatuses(children, undefined, new Set(["heartbeat-session"]))).toEqual({
-			total: 8,
+			total: 9,
 			running: 4,
-			idle: 2,
+			idle: 3,
 			inactive: 2,
 		});
 	});

@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import type { ResourceDiagnostic } from "./diagnostics.js";
-import type { AgentTemplateDefinitionV1 } from "./extensions/agent-templates.js";
+import type { AgentTemplateDefinitionV1, AgentTemplateSkillEnforcementV1 } from "./extensions/agent-templates.js";
 import type { ResourceExtensionPaths, ResourceLoader } from "./resource-loader.js";
 import type { Skill } from "./skills.js";
 
@@ -24,6 +24,7 @@ export interface ResourceScope {
 	};
 	promptAppend?: string;
 	templateId?: string;
+	skillEnforcement?: AgentTemplateSkillEnforcementV1;
 }
 
 export interface ScopedSkillSnapshot {
@@ -32,8 +33,22 @@ export interface ScopedSkillSnapshot {
 	sha256: string;
 }
 
+export interface ResolvedSkillEnforcementMethodV1 extends ScopedSkillSnapshot {
+	readonly bodySha256: string;
+	readonly body: string;
+}
+
+export interface ResolvedSkillEnforcementContractV1 {
+	readonly schema: "prime.skill-enforcement-contract/v1";
+	readonly templateId: string;
+	readonly contractSha256: string;
+	readonly methods: ReadonlyArray<Readonly<ResolvedSkillEnforcementMethodV1>>;
+	readonly maxRepairTurns: number;
+}
+
 export interface ResolvedResourceScope extends ResourceScope {
 	skillSnapshots: ScopedSkillSnapshot[];
+	skillEnforcementContract?: ResolvedSkillEnforcementContractV1;
 }
 
 export interface PersistedResourceScopeIdentity {
@@ -42,10 +57,87 @@ export interface PersistedResourceScopeIdentity {
 	promptSha256: string;
 	skillNames: string[];
 	skillSnapshots: ScopedSkillSnapshot[];
+	skillEnforcementContract?: ResolvedSkillEnforcementContractV1;
 }
 
 export function agentTemplateDigest(template: Readonly<AgentTemplateDefinitionV1>): string {
 	return createHash("sha256").update(JSON.stringify(template)).digest("hex");
+}
+
+function skillEnforcementContractDigest(input: {
+	schema: "prime.skill-enforcement-contract/v1";
+	templateId: string;
+	methods: ReadonlyArray<Readonly<ResolvedSkillEnforcementMethodV1>>;
+	maxRepairTurns: number;
+}): string {
+	return createHash("sha256").update(JSON.stringify(input)).digest("hex");
+}
+
+export function resolveSkillEnforcementContract(
+	templateId: string,
+	policy: AgentTemplateSkillEnforcementV1,
+	skillSnapshots: ReadonlyArray<Readonly<ScopedSkillSnapshot>>,
+	methodBodies: ReadonlyMap<string, string>,
+): ResolvedSkillEnforcementContractV1 {
+	const methods = Object.freeze(
+		skillSnapshots.map((snapshot) => {
+			const body = methodBodies.get(snapshot.name);
+			if (body === undefined) {
+				throw new Error(`Scoped skill ${JSON.stringify(snapshot.name)} has no immutable method body snapshot`);
+			}
+			return Object.freeze({
+				...snapshot,
+				bodySha256: createHash("sha256").update(body).digest("hex"),
+				body,
+			});
+		}),
+	) as ReadonlyArray<Readonly<ResolvedSkillEnforcementMethodV1>>;
+	const hashInput = {
+		schema: "prime.skill-enforcement-contract/v1" as const,
+		templateId,
+		methods,
+		maxRepairTurns: policy.maxRepairTurns,
+	};
+	return Object.freeze({
+		...hashInput,
+		contractSha256: skillEnforcementContractDigest(hashInput),
+	});
+}
+
+export function verifyPersistedSkillEnforcementContract(
+	identity: PersistedResourceScopeIdentity,
+): ResolvedSkillEnforcementContractV1 | undefined {
+	const contract = identity.skillEnforcementContract;
+	if (!contract) return undefined;
+	if (
+		contract.schema !== "prime.skill-enforcement-contract/v1" ||
+		contract.templateId !== identity.templateId ||
+		!Number.isSafeInteger(contract.maxRepairTurns) ||
+		contract.maxRepairTurns < 0 ||
+		JSON.stringify(contract.methods.map(({ name, filePath, sha256 }) => ({ name, filePath, sha256 }))) !==
+			JSON.stringify(identity.skillSnapshots) ||
+		contract.methods.some(
+			(method) =>
+				typeof method.body !== "string" ||
+				typeof method.bodySha256 !== "string" ||
+				createHash("sha256").update(method.body).digest("hex") !== method.bodySha256,
+		)
+	) {
+		throw new Error("Persisted agent template skill enforcement contract is malformed");
+	}
+	const expected = skillEnforcementContractDigest({
+		schema: contract.schema,
+		templateId: contract.templateId,
+		methods: contract.methods,
+		maxRepairTurns: contract.maxRepairTurns,
+	});
+	if (contract.contractSha256 !== expected) {
+		throw new Error("Persisted agent template skill enforcement contract hash is invalid");
+	}
+	return Object.freeze({
+		...contract,
+		methods: Object.freeze(contract.methods.map((method) => Object.freeze({ ...method }))),
+	});
 }
 
 const SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
@@ -287,6 +379,18 @@ export function resolveResourceScope(base: ResourceLoader, requested: ResourceSc
 	if (requested.promptAppend !== undefined && !promptAppend) {
 		throw new Error("Scoped promptAppend must be non-empty when provided");
 	}
+	if (requested.skillEnforcement && !requested.templateId) {
+		throw new Error("Scoped skill enforcement requires a templateId");
+	}
+	const skillEnforcementContract =
+		requested.skillEnforcement && requested.templateId
+			? resolveSkillEnforcementContract(
+					requested.templateId,
+					requested.skillEnforcement,
+					snapshots,
+					new Map(snapshots.map((snapshot) => [snapshot.name, readVerifiedScopedSkillBody(base, snapshot)])),
+				)
+			: undefined;
 	return Object.freeze({
 		...(requested.skills
 			? {
@@ -300,9 +404,11 @@ export function resolveResourceScope(base: ResourceLoader, requested: ResourceSc
 			: {}),
 		...(promptAppend ? { promptAppend } : {}),
 		...(requested.templateId ? { templateId: requested.templateId } : {}),
+		...(requested.skillEnforcement ? { skillEnforcement: Object.freeze({ ...requested.skillEnforcement }) } : {}),
 		skillSnapshots: Object.freeze(
 			snapshots.map((snapshot) => Object.freeze(snapshot)),
 		) as unknown as ScopedSkillSnapshot[],
+		...(skillEnforcementContract ? { skillEnforcementContract } : {}),
 	});
 }
 
@@ -310,6 +416,7 @@ export function restoreResourceScope(
 	base: ResourceLoader,
 	identity: PersistedResourceScopeIdentity,
 ): ResolvedResourceScope {
+	const persistedContract = verifyPersistedSkillEnforcementContract(identity);
 	const registered = base.getExtensions().runtime.agentTemplates.get(identity.templateId);
 	if (!registered) throw new Error(`Persisted agent template ${JSON.stringify(identity.templateId)} is unavailable`);
 	const template = registered.definition;
@@ -332,17 +439,67 @@ export function restoreResourceScope(
 			`Persisted agent template ${JSON.stringify(identity.templateId)} skill selection changed; start a fresh child`,
 		);
 	}
-	if (JSON.stringify(scope.skillSnapshots) !== JSON.stringify(identity.skillSnapshots)) {
+	if (!persistedContract && JSON.stringify(scope.skillSnapshots) !== JSON.stringify(identity.skillSnapshots)) {
 		throw new Error(
 			`Persisted agent template ${JSON.stringify(identity.templateId)} skill sources changed; start a fresh child`,
 		);
 	}
-	return scope;
+	if (!!template.skillEnforcement !== !!persistedContract) {
+		throw new Error(
+			`Persisted agent template ${JSON.stringify(identity.templateId)} skill enforcement changed; start a fresh child`,
+		);
+	}
+	return Object.freeze({
+		...scope,
+		...(template.skillEnforcement ? { skillEnforcement: Object.freeze({ ...template.skillEnforcement }) } : {}),
+		skillSnapshots: Object.freeze(
+			identity.skillSnapshots.map((snapshot) => Object.freeze({ ...snapshot })),
+		) as unknown as ScopedSkillSnapshot[],
+		...(persistedContract ? { skillEnforcementContract: persistedContract } : {}),
+	});
 }
 
 function cloneSelectedSkill(skill: Skill, exposeSelected: boolean): Skill {
 	if (!exposeSelected || !skill.disableModelInvocation) return { ...skill };
 	return { ...skill, disableModelInvocation: false };
+}
+
+/**
+ * Return one method body only after its complete package still matches the
+ * admission-time snapshot. The second digest closes the read/verify TOCTOU
+ * window; changed package bytes are never returned to the child.
+ */
+export function readResolvedSkillEnforcementMethodBody(method: Readonly<ResolvedSkillEnforcementMethodV1>): string {
+	if (createHash("sha256").update(method.body).digest("hex") !== method.bodySha256) {
+		throw new Error(`Scoped skill ${JSON.stringify(method.name)} immutable method body snapshot is invalid`);
+	}
+	return method.body;
+}
+
+export function readVerifiedScopedSkillBody(loader: ResourceLoader, snapshot: Readonly<ScopedSkillSnapshot>): string {
+	const loaded = loader.getSkills();
+	const skill = loaded.skills.find((candidate) => candidate.name === snapshot.name);
+	if (!skill || skill.filePath !== snapshot.filePath) {
+		throw new Error(`Scoped skill ${JSON.stringify(snapshot.name)} is unavailable from the admitted resource view`);
+	}
+	const beforeDigest = skillDigest(skill);
+	if (beforeDigest !== snapshot.sha256) {
+		throw new Error(`Scoped skill ${JSON.stringify(snapshot.name)} changed after admission`);
+	}
+	if (!existsSync(skill.filePath)) {
+		throw new Error(`Scoped skill ${JSON.stringify(snapshot.name)} method body is unavailable`);
+	}
+	const stat = lstatSync(skill.filePath);
+	if (!stat.isFile() || stat.size > MAX_PACKAGE_BYTES) {
+		throw new Error(
+			`Scoped skill ${JSON.stringify(snapshot.name)} method body exceeds snapshot limit (${MAX_PACKAGE_BYTES} bytes)`,
+		);
+	}
+	const content = readStableFile(skill.filePath, stat, skill, skill.filePath);
+	if (skillDigest(skill) !== snapshot.sha256) {
+		throw new Error(`Scoped skill ${JSON.stringify(snapshot.name)} changed while activating`);
+	}
+	return content.toString("utf8");
 }
 
 export class ScopedResourceLoader implements ResourceLoader {

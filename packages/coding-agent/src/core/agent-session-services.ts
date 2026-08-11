@@ -14,7 +14,12 @@ import { McpManager } from "./mcp/mcp-manager.js";
 import { ModelRegistry } from "./model-registry.js";
 import { DefaultResourceLoader, type DefaultResourceLoaderOptions, type ResourceLoader } from "./resource-loader.js";
 import type { RlmAgentTemplateMetadata, SubagentRuntimeHost } from "./rlm-runtime.js";
-import { type ResolvedResourceScope, restoreResourceScope, ScopedResourceLoader } from "./scoped-resource-loader.js";
+import {
+	type ResolvedResourceScope,
+	type ResolvedSkillEnforcementContractV1,
+	restoreResourceScope,
+	ScopedResourceLoader,
+} from "./scoped-resource-loader.js";
 import { type CreateAgentSessionResult, createAgentSession } from "./sdk.js";
 import type { SessionManager } from "./session-manager.js";
 import { SettingsManager } from "./settings-manager.js";
@@ -68,6 +73,8 @@ export interface AgentSessionCreationOptions {
 	allowedToolNames?: string[];
 	/** Immutable child-only skills and supplemental prompt resolved before admission. */
 	resourceScope?: ResolvedResourceScope;
+	/** Resolved host-owned method enforcement contract for this child session. */
+	skillEnforcementContract?: ResolvedSkillEnforcementContractV1;
 	includeGoals?: boolean;
 	includeCompactSkill?: boolean;
 	agentMessageController?: AgentSessionMessageController;
@@ -270,6 +277,21 @@ function persistedTemplateIdentity(sessionManager: SessionManager): RlmAgentTemp
 				typeof snapshot.filePath === "string" &&
 				typeof snapshot.sha256 === "string",
 		) ||
+		(data.skillEnforcementContract !== undefined &&
+			(data.skillEnforcementContract.schema !== "prime.skill-enforcement-contract/v1" ||
+				typeof data.skillEnforcementContract.templateId !== "string" ||
+				typeof data.skillEnforcementContract.contractSha256 !== "string" ||
+				!Array.isArray(data.skillEnforcementContract.methods) ||
+				!data.skillEnforcementContract.methods.every(
+					(method) =>
+						typeof method === "object" &&
+						method !== null &&
+						typeof method.name === "string" &&
+						typeof method.filePath === "string" &&
+						typeof method.sha256 === "string",
+				) ||
+				!Number.isSafeInteger(data.skillEnforcementContract.maxRepairTurns) ||
+				data.skillEnforcementContract.maxRepairTurns < 0)) ||
 		!(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as unknown[]).includes(data.thinkingLevel) ||
 		!Array.isArray(data.activeToolNames) ||
 		!data.activeToolNames.every((name) => typeof name === "string") ||
@@ -300,6 +322,7 @@ export async function createAgentSessionFromServices(
 		resourceLoader: resourceScope
 			? new ScopedResourceLoader(options.services.resourceLoader, resourceScope)
 			: options.services.resourceLoader,
+		skillEnforcementContract: resourceScope?.skillEnforcementContract,
 		mcpManager: options.services.mcpManager,
 		sessionManager: options.sessionManager,
 		model: options.model,

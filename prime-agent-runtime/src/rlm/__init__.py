@@ -74,6 +74,7 @@ class RLMSubagent:
     session_name: str
     session_dir: Path
     status: str
+    skill_enforcement_result: dict[str, Any] | None = None
 
 
 def _install_control_comm_handlers() -> None:
@@ -258,6 +259,7 @@ def _subagent_from_payload(payload: Any, operation: str = "rlm.list_subagents") 
     session_name = payload.get("session_name")
     session_dir = payload.get("session_dir")
     status = payload.get("status")
+    skill_enforcement_result = payload.get("skill_enforcement_result")
     if not isinstance(child_id, str) or not child_id:
         raise RuntimeError(f"{operation} entry is missing rlm_child_id")
     if active_session_id is not None and not isinstance(active_session_id, str):
@@ -268,8 +270,10 @@ def _subagent_from_payload(payload: Any, operation: str = "rlm.list_subagents") 
         raise RuntimeError(f"{operation} entry is missing session_name")
     if not isinstance(session_dir, str) or not session_dir:
         raise RuntimeError(f"{operation} entry is missing session_dir")
-    if status not in {"running", "completed", "error"}:
+    if status not in {"running", "completed", "enforcement_failed", "error"}:
         raise RuntimeError(f"{operation} entry has invalid status")
+    if skill_enforcement_result is not None and not isinstance(skill_enforcement_result, dict):
+        raise RuntimeError(f"{operation} entry has invalid skill_enforcement_result")
     return RLMSubagent(
         rlm_child_id=child_id,
         active_session_id=active_session_id,
@@ -277,6 +281,7 @@ def _subagent_from_payload(payload: Any, operation: str = "rlm.list_subagents") 
         session_name=session_name,
         session_dir=Path(session_dir),
         status=status,
+        skill_enforcement_result=skill_enforcement_result,
     )
 
 

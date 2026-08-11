@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Added deterministic child-template method enforcement with snapshot-verified `skill_usage` activation, append-only dispositions, bounded completion repair, hash-bound attestations, daemon/resume persistence, and parent-visible inspection counts. Enforcement remains opt-in for ordinary v1 templates and fail-closed for declaring packages.
 - Added trusted extension Agent Templates for child-only RLM personas with immutable exact skill scopes, parent-bounded tool policies, and hash-verified resume compatibility.
 - Added host-managed local stdio MCP servers with serialized calls, restart handling, and cleanup on reload or session disposal.
 - Added bounded IPython output artifacts with opaque retrieval handles for oversized stdout, stderr, results, and tracebacks.
