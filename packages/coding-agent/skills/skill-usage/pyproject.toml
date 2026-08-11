@@ -1,0 +1,15 @@
+# Kernel-side package for host-owned deterministic skill usage enforcement.
+# prime-agent-runtime supplies rlm.host_request in the kernel environment.
+[project]
+name = "skill-usage"
+version = "0.1.0"
+description = "Prime Agent host-attributed scoped method activation and disposition"
+requires-python = ">=3.10"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skill_usage"]

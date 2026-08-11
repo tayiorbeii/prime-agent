@@ -28,7 +28,10 @@ export function countDirectSubagentStatuses(
 			(child.activeSessionId !== undefined && activeHeartbeatSessionIds.has(child.activeSessionId));
 		if (isRunning) {
 			running += 1;
-		} else if ((child.status === "done" || child.status === "error") && child.activeSessionId !== undefined) {
+		} else if (
+			(child.status === "done" || child.status === "error" || child.status === "enforcement_failed") &&
+			child.activeSessionId !== undefined
+		) {
 			idle += 1;
 		}
 	}

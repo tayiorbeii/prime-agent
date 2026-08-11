@@ -332,6 +332,7 @@ async function openAgentsViewSession(
 				closeClientOnDispose: true,
 				recoverDaemon: options.recoverDaemon,
 				reconnectTimeoutMs: options.reconnectTimeoutMs,
+				telemetryDisabled: options.config.telemetryDisabled,
 			});
 			return { connection, summary };
 		} catch (error) {
@@ -354,6 +355,7 @@ async function openAgentsViewSession(
 			closeClientOnDispose: true,
 			recoverDaemon: options.recoverDaemon,
 			reconnectTimeoutMs: options.reconnectTimeoutMs,
+			telemetryDisabled: options.config.telemetryDisabled,
 		});
 		return { connection, summary: resumed.summary, cwdFallbackNotice: resumed.cwdFallbackNotice };
 	} catch (error) {
@@ -2091,6 +2093,22 @@ export class AgentsViewMode implements Component, Focusable {
 		message: string,
 		streamingBehavior?: "steer" | "followUp",
 	): Promise<void> {
+		if (this.options.config.telemetryDisabled) {
+			const client = await this.connectDedicatedClient();
+			const connection = await DaemonAgentConnection.attach(client, activeSessionId, {
+				closeClientOnDispose: true,
+				supportsExtensionUi: false,
+				recoverDaemon: this.options.recoverDaemon,
+				reconnectTimeoutMs: this.options.reconnectTimeoutMs,
+				telemetryDisabled: true,
+			});
+			try {
+				await connection.prompt(message, streamingBehavior === undefined ? undefined : { streamingBehavior });
+			} finally {
+				await connection.dispose();
+			}
+			return;
+		}
 		const command: PromptCommand = { type: "prompt", activeSessionId, message };
 		if (streamingBehavior) command.streamingBehavior = streamingBehavior;
 		const response = await this.requireClient().request(command);
@@ -2569,7 +2587,14 @@ export class AgentsViewMode implements Component, Focusable {
 		// Append the background summary as a dim suffix on the same line, e.g.
 		// "fix auth · Refactoring token validation". Hidden during delete/stop
 		// confirmations so the warning text stands alone.
-		const summaryText = !pendingDelete && !pendingKill ? row.summary.summary : undefined;
+		const enforcement = !pendingDelete && !pendingKill ? row.summary.skillEnforcementResult : undefined;
+		const enforcementText = enforcement
+			? `methods ${enforcement.activatedMethods.length}/${enforcement.methodCount} · applied ${enforcement.appliedMethods.length} · n/a ${enforcement.notApplicableMethods.length} · missing ${enforcement.missingMethods.length}`
+			: undefined;
+		const summaryText =
+			!pendingDelete && !pendingKill
+				? [row.summary.summary, enforcementText].filter(Boolean).join(" · ") || undefined
+				: undefined;
 		const titleContent = summaryText ? `${title} ${theme.fg("dim", `· ${summaryText}`)}` : title;
 		const titleCell = formatTableCell(titleContent, titleWidth);
 		const cells = [

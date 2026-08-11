@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import os
 import shutil
 from contextlib import AsyncExitStack
@@ -23,6 +22,7 @@ class JCodeMunch(McpIntegration):
     server = "jcodemunch"
     url = None
     bearer_token_env = "JCODEMUNCH_MCP_TOKEN"
+    credentials_optional = True
     executable = "jcodemunch-mcp"
     endpoint_env = "JCODEMUNCH_MCP_URL"
     supported_tools = frozenset(
@@ -41,15 +41,22 @@ class JCodeMunch(McpIntegration):
         }
     )
 
-    async def _resolve_config(self) -> tuple[str | None, dict[str, str]]:
-        try:
-            url, headers = await super()._resolve_config()
-        except mcp_base.Disabled as exc:
-            raise SidecarUnavailable(
-                "jCodeMunch is disabled in Prime Agent settings. Enable "
-                "mcpServers.jcodemunch before using this skill."
-            ) from exc
-        return url or os.environ.get(self.endpoint_env, "").strip() or None, headers
+    def _fallback_url(self) -> str | None:
+        return self.url or os.environ.get(self.endpoint_env, "").strip() or None
+
+    def _using_environment_fallback(self, config: dict[str, Any]) -> bool:
+        configured_url = config.get("url")
+        return not (isinstance(configured_url, str) and configured_url) and bool(
+            os.environ.get(self.endpoint_env, "").strip()
+        )
+
+    def _headers_for_config(self, config: dict[str, Any], url: str) -> dict[str, str]:
+        if self._using_environment_fallback(config):
+            return {}
+        return super()._headers_for_config(config, url)
+
+    def _allow_stored_auth(self, config: dict[str, Any], url: str) -> bool:
+        return not self._using_environment_fallback(config)
 
     async def available(self) -> dict[str, Any]:
         """Return a diagnostic without installing, starting, or upgrading a sidecar."""
@@ -70,9 +77,7 @@ class JCodeMunch(McpIntegration):
         if not disabled:
             url = config.get("url")
             if not isinstance(url, str) or not url:
-                url = self.url
-            if not url:
-                url = os.environ.get(self.endpoint_env, "").strip() or None
+                url = self._fallback_url()
         endpoint = None if disabled or host_stdio else url
         executable = shutil.which(self.executable)
         return {
@@ -86,53 +91,32 @@ class JCodeMunch(McpIntegration):
             ),
         }
 
-    async def _open_session(self, stack: AsyncExitStack):
-        url, extra_headers = await self._resolve_config()
-        if not url:
+    async def _open_session(
+        self,
+        stack: AsyncExitStack,
+        config: dict[str, Any] | None = None,
+    ):
+        try:
+            return await super()._open_session(stack, config)
+        except mcp_base.Disabled as exc:
+            raise SidecarUnavailable(
+                "jCodeMunch is disabled in Prime Agent settings. Enable "
+                "mcpServers.jcodemunch before using this skill."
+            ) from exc
+        except ValueError as exc:
+            if "must set `url`" not in str(exc):
+                raise
             diagnostic = await self.available()
             if diagnostic["stdio_only"]:
                 raise SidecarUnavailable(
                     "jCodeMunch is installed as a local command, but it is not configured "
-                    "as a host-managed stdio server. Add mcpServers.jcodemunch with type "
-                    "'stdio' and the separately installed command, or configure "
-                    "JCODEMUNCH_MCP_URL / an HTTP mcpServers entry."
-                )
+                    "as a host-managed stdio server. Configure the separately installed "
+                    "command or an HTTP endpoint."
+                ) from exc
             raise SidecarUnavailable(
                 "jCodeMunch is unavailable: configure JCODEMUNCH_MCP_URL or "
-                "mcpServers.jcodemunch with an HTTP endpoint, or configure a host-managed "
-                "stdio command. The skill does not install, start, upgrade, or purge sidecars."
-            )
-        from mcp import ClientSession  # noqa: PLC0415
-
-        # Local HTTP sidecars are frequently unauthenticated. Preserve hosted
-        # bearer/OAuth behavior when credentials exist, but do not make them a
-        # prerequisite for an endpoint that accepts no Authorization header.
-        try:
-            token = await self._resolve_token()
-        except mcp_base.NotEnabled:
-            token = None
-        headers = dict(extra_headers)
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-
-        transport = mcp_base._resolve_streamable_http()
-        params = inspect.signature(transport).parameters
-        if "headers" in params:
-            cm = transport(url, headers=headers)
-        elif "http_client" in params:
-            import httpx  # noqa: PLC0415
-
-            client = await stack.enter_async_context(httpx.AsyncClient(headers=headers))
-            cm = transport(url, http_client=client)
-        else:
-            raise RuntimeError(
-                f"unsupported mcp streamable-HTTP client signature: {tuple(params)}"
-            )
-
-        read, write, *_ = await stack.enter_async_context(cm)
-        session = await stack.enter_async_context(ClientSession(read, write))
-        await session.initialize()
-        return session
+                "a host HTTP/stdio entry. The skill does not manage sidecars."
+            ) from exc
 
     async def list_tools(self) -> list[dict[str, Any]]:
         tools = await super().list_tools()

@@ -11,7 +11,13 @@ import {
 import { registerOAuthProvider, unregisterOAuthProvider } from "@earendil-works/pi-ai/oauth";
 import type { AuthStorage } from "../auth-storage.js";
 import type { McpServerConfig } from "../settings-manager.js";
-import { isRetryableStdioMcpError, isStdioMcpRequestNotSentError, StdioMcpClient } from "./stdio-mcp-client.js";
+import {
+	DEFAULT_MAX_JSON_RPC_REQUEST_BYTES,
+	DEFAULT_MAX_TOOL_ARGUMENT_BYTES,
+	isRetryableStdioMcpError,
+	isStdioMcpRequestNotSentError,
+	StdioMcpClient,
+} from "./stdio-mcp-client.js";
 
 export interface McpManagerOptions {
 	authStorage: AuthStorage;
@@ -326,6 +332,9 @@ export class McpManager {
 			// Keep the configured env private to this child. It is never returned in a
 			// host response or included in a diagnostic.
 			env: { ...process.env, ...(integration.env ?? {}) },
+			onLifecycleInvalidated: () => {
+				this.lifecycleGeneration += 1;
+			},
 		});
 		this.stdioClients.set(server, client);
 		return client;
@@ -336,13 +345,49 @@ export class McpManager {
 		return !integration.disabledTools?.includes(tool);
 	}
 
+	private validateBridgeRequest(payload: Record<string, unknown>, operation: string): number | undefined {
+		let encoded: string;
+		try {
+			encoded = JSON.stringify(payload);
+		} catch {
+			throw new Error(`${operation} payload must be JSON-serializable`);
+		}
+		const bytes = Buffer.byteLength(encoded, "utf8");
+		if (bytes > DEFAULT_MAX_JSON_RPC_REQUEST_BYTES) {
+			throw new Error(
+				`${operation} payload is ${bytes} bytes; host bridge limit is ${DEFAULT_MAX_JSON_RPC_REQUEST_BYTES}`,
+			);
+		}
+		const deadline = payload.deadlineEpochMs;
+		if (deadline === undefined) return undefined;
+		if (typeof deadline !== "number" || !Number.isSafeInteger(deadline) || deadline < 0) {
+			throw new Error(`${operation} deadlineEpochMs must be a non-negative safe integer`);
+		}
+		return deadline;
+	}
+
+	private assertDeadline(deadlineEpochMs: number | undefined, operation: string): void {
+		if (deadlineEpochMs !== undefined && Date.now() >= deadlineEpochMs) {
+			throw new Error(`${operation} deadline expired before sidecar dispatch`);
+		}
+	}
+
 	private async withStdioClient<T>(
 		server: string,
 		operation: (client: StdioMcpClient) => Promise<T>,
-		options: { retryTransport?: boolean; retryOnlyIfRequestNotSent?: boolean } = {},
+		options: {
+			retryTransport?: boolean;
+			retryOnlyIfRequestNotSent?: boolean;
+			deadlineEpochMs?: number;
+			operationName?: string;
+		} = {},
 	): Promise<T> {
 		const previous = this.stdioOperationQueues.get(server) ?? Promise.resolve();
 		const queued = previous.then(async () => {
+			const operationName = options.operationName ?? "MCP operation";
+			// This check belongs inside the serialized queue: an operation can be
+			// fresh when enqueued but expired after waiting behind another call.
+			this.assertDeadline(options.deadlineEpochMs, operationName);
 			const client = this.getStdioClient(server);
 			try {
 				return await operation(client);
@@ -359,7 +404,12 @@ export class McpManager {
 					const timer = globalThis.setTimeout(resolve, 100);
 					timer.unref?.();
 				});
+				// Do not start/initialize a replacement process if the caller expired
+				// during retry backoff.
+				this.assertDeadline(options.deadlineEpochMs, operationName);
 				await client.restart();
+				// A retry is a second dispatch and must not escape the propagated deadline.
+				this.assertDeadline(options.deadlineEpochMs, operationName);
 				return operation(client);
 			}
 		});
@@ -394,19 +444,40 @@ export class McpManager {
 			"mcp.config": async (payload) => {
 				const server = String(payload.server ?? "");
 				if (!server) throw new Error("mcp.config requires a server");
-				if (this.disposed) return { enabled: false };
+				if (this.disposed) return { enabled: false, generation: this.lifecycleGeneration };
 				const integration = this.integrations.get(server);
-				if (!integration) return {};
+				if (!integration) return { generation: this.lifecycleGeneration };
 				// `enabled: false` is an explicit user boundary, not an authentication
 				// hint. Return no endpoint so Python integrations cannot fall back to an
 				// environment URL or establish an anonymous connection.
-				if (integration.enabled === false) return { enabled: false };
+				if (integration.enabled === false) {
+					if (integration.type === "http") {
+						return {
+							type: "http",
+							enabled: false,
+							allowStoredAuth: false,
+							generation: this.lifecycleGeneration,
+						};
+					}
+					return { enabled: false, generation: this.lifecycleGeneration };
+				}
 				if (integration.type === "stdio") {
 					// The command, cwd, and env stay host-side. Python receives only a
 					// transport marker and uses the durable host bridge below.
-					return { type: "stdio", bridge: "host" };
+					return { type: "stdio", bridge: "host", generation: this.lifecycleGeneration };
 				}
-				const config: Record<string, unknown> = { url: integration.url };
+				const catalogOverride =
+					integration.userDeclared === true && getCatalogEntry(integration.server) !== undefined;
+				const config: Record<string, unknown> = {
+					type: "http",
+					url: integration.url,
+					generation: this.lifecycleGeneration,
+					// Stored auth is valid only for the endpoint/provider that issued it.
+					// A user override of a catalog name could otherwise receive the
+					// official service's token.
+					allowStoredAuth: !integration.userDeclared || (integration.usesOAuth && !catalogOverride),
+				};
+				if (integration.bearerTokenEnvVar) config.bearerTokenEnvVar = integration.bearerTokenEnvVar;
 				if (integration.headers && Object.keys(integration.headers).length > 0) {
 					config.headers = integration.headers;
 				}
@@ -415,13 +486,18 @@ export class McpManager {
 				return config;
 			},
 			"mcp.list_tools": async (payload) => {
+				const deadlineEpochMs = this.validateBridgeRequest(payload, "mcp.list_tools");
 				const server = String(payload.server ?? "");
 				if (!server) throw new Error("mcp.list_tools requires a server");
 				const integration = this.getStdioIntegration(server);
-				const tools = await this.withStdioClient(server, (client) => client.listTools());
+				const tools = await this.withStdioClient(server, (client) => client.listTools(deadlineEpochMs), {
+					deadlineEpochMs,
+					operationName: "mcp.list_tools",
+				});
 				return { tools: tools.filter((tool) => this.isToolAllowed(integration, tool.name)) };
 			},
 			"mcp.call_tool": async (payload) => {
+				const deadlineEpochMs = this.validateBridgeRequest(payload, "mcp.call_tool");
 				const server = String(payload.server ?? "");
 				const tool = String(payload.tool ?? "");
 				if (!server) throw new Error("mcp.call_tool requires a server");
@@ -437,10 +513,20 @@ export class McpManager {
 				) {
 					throw new Error("mcp.call_tool arguments must be an object");
 				}
+				const argumentBytes = Buffer.byteLength(JSON.stringify(arguments_ ?? {}), "utf8");
+				if (argumentBytes > DEFAULT_MAX_TOOL_ARGUMENT_BYTES) {
+					throw new Error(
+						`mcp.call_tool arguments are ${argumentBytes} bytes; limit is ${DEFAULT_MAX_TOOL_ARGUMENT_BYTES}`,
+					);
+				}
 				const result = await this.withStdioClient(
 					server,
-					(client) => client.callTool(tool, (arguments_ ?? {}) as Record<string, unknown>),
-					{ retryOnlyIfRequestNotSent: true },
+					(client) => client.callTool(tool, (arguments_ ?? {}) as Record<string, unknown>, deadlineEpochMs),
+					{
+						retryOnlyIfRequestNotSent: true,
+						deadlineEpochMs,
+						operationName: "mcp.call_tool",
+					},
 				);
 				return { result };
 			},
@@ -455,7 +541,7 @@ export class McpManager {
 				if (!server) throw new Error("mcp.restart requires a server");
 				this.getStdioIntegration(server);
 				await this.withStdioClient(server, (client) => client.restart(), { retryTransport: false });
-				return { healthy: true };
+				return { healthy: true, generation: this.lifecycleGeneration };
 			},
 		};
 		// Only expose begin_login when an interactive login is actually wired, so the

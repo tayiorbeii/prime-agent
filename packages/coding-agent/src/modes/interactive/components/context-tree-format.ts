@@ -25,6 +25,7 @@ function statusIcon(status: ContextTreeNode["status"]): string {
 			return theme.fg("accent", "◆");
 		case "done":
 			return theme.fg("success", "✓");
+		case "enforcement_failed":
 		case "error":
 		case "cancelled":
 			return theme.fg("error", "✗");

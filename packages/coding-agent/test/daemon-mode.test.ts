@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer, type Server, type Socket } from "node:net";
@@ -21,6 +22,11 @@ import {
 } from "../src/core/rlm-runtime.js";
 import { canonicalSessionPath } from "../src/core/session-lease.js";
 import { readSessionInfo, type SessionInfo, SessionManager } from "../src/core/session-manager.js";
+import {
+	createSkillEnforcementResult,
+	foldSkillEnforcementLedger,
+	verifySkillEnforcementResultAgainstLedger,
+} from "../src/core/skill-enforcement.js";
 import type { ActiveSessionState, DaemonSocketClient } from "../src/modes/daemon/active-session-state.js";
 import {
 	AgentDaemon,
@@ -751,8 +757,25 @@ describe("daemon mode helpers", () => {
 					options: CreateRlmSubagentRuntimeOptions,
 				): Promise<ActiveSessionState["runtime"]>;
 				createSubagentRuntimeHost(parentState: ActiveSessionState): SubagentRuntimeHost;
-				listPassiveRlmSubagents(): Promise<Array<{ entry: { childId: string } }>>;
-				findPassiveRlmSubagent(target: string): Promise<{ entry: { childId: string } } | undefined>;
+				listPassiveRlmSubagents(): Promise<
+					Array<{
+						entry: {
+							childId: string;
+							status?: string;
+							skillEnforcementResult?: ReturnType<typeof createSkillEnforcementResult>;
+						};
+					}>
+				>;
+				findPassiveRlmSubagent(target: string): Promise<
+					| {
+							entry: {
+								childId: string;
+								status?: string;
+								skillEnforcementResult?: ReturnType<typeof createSkillEnforcementResult>;
+							};
+					  }
+					| undefined
+				>;
 				createAgentMessageController(
 					getCurrentState: () => ActiveSessionState | undefined,
 				): AgentSessionMessageController;
@@ -773,6 +796,33 @@ describe("daemon mode helpers", () => {
 				hasRunningRlmChildren: () => false,
 				getSessionActionSnapshot: () => ({ queuedCount: 0, steering: [], followUps: [] }),
 			});
+			const enforcementMethod = {
+				name: "method-one",
+				filePath: "/skills/method-one/SKILL.md",
+				sha256: "c".repeat(64),
+				bodySha256: createHash("sha256").update("Deterministic daemon method body").digest("hex"),
+				body: "Deterministic daemon method body",
+			};
+			const enforcementContractHashInput = {
+				schema: "prime.skill-enforcement-contract/v1" as const,
+				templateId: "prime/template/enforced",
+				methods: [enforcementMethod],
+				maxRepairTurns: 2,
+			};
+			const templateMetadata = {
+				schema: "prime.agent-template-resolution/v1" as const,
+				templateId: "prime/template/enforced",
+				templateSha256: "a".repeat(64),
+				promptSha256: "b".repeat(64),
+				skillNames: ["method-one"],
+				skillSnapshots: [{ name: "method-one", filePath: "/skills/method-one/SKILL.md", sha256: "c".repeat(64) }],
+				skillEnforcementContract: {
+					...enforcementContractHashInput,
+					contractSha256: createHash("sha256").update(JSON.stringify(enforcementContractHashInput)).digest("hex"),
+				},
+				thinkingLevel: "off" as const,
+				activeToolNames: [],
+			};
 			const childRuntime = await internals.createRlmSubagentRuntime(parentState, {
 				parentSession: parentState.runtime.session,
 				id: "child-1",
@@ -790,11 +840,83 @@ describe("daemon mode helpers", () => {
 				rlmDepth: 1,
 				rlmMaxDepth: 4,
 				rlmParentNodeId: "child-1",
+				templateMetadata,
 			});
+			const persistedTemplate = childRuntime.session.sessionManager
+				.getEntries()
+				.find((entry) => entry.type === "custom" && entry.customType === "prime.agent-template-resolution/v1");
+			expect(persistedTemplate?.type === "custom" ? persistedTemplate.data : undefined).toEqual(templateMetadata);
 			const childState = [...internals.sessions.values()].find(
 				(state) => state.runtime.session === childRuntime.session,
 			);
 			if (!childState?.runtime.session.sessionFile) throw new Error("Missing child state");
+			let enforcementResult: ReturnType<typeof createSkillEnforcementResult>;
+			childRuntime.session.sessionManager.appendCustomEntry("prime.skill-enforcement-contract/v1", {
+				schema: "prime.skill-enforcement-contract/v1",
+				sessionId: childRuntime.session.sessionId,
+				templateId: templateMetadata.templateId,
+				contractSha256: templateMetadata.skillEnforcementContract.contractSha256,
+				methods: [
+					{ name: enforcementMethod.name, filePath: enforcementMethod.filePath, sha256: enforcementMethod.sha256 },
+				],
+				maxRepairTurns: 2,
+				createdAt: 1,
+			});
+			childRuntime.session.sessionManager.appendCustomEntry("prime.skill-activation/v1", {
+				schema: "prime.skill-activation/v1",
+				sessionId: childRuntime.session.sessionId,
+				templateId: templateMetadata.templateId,
+				contractSha256: templateMetadata.skillEnforcementContract.contractSha256,
+				methodName: enforcementMethod.name,
+				methodSha256: enforcementMethod.sha256,
+				intent: "daemon parity",
+				requestId: "activation-request",
+				activatedAt: 2,
+			});
+			childRuntime.session.sessionManager.appendCustomEntry("prime.skill-disposition/v1", {
+				schema: "prime.skill-disposition/v1",
+				sessionId: childRuntime.session.sessionId,
+				templateId: templateMetadata.templateId,
+				contractSha256: templateMetadata.skillEnforcementContract.contractSha256,
+				methodName: enforcementMethod.name,
+				methodSha256: enforcementMethod.sha256,
+				status: "applied",
+				evidence: ["test:daemon-mode"],
+				summary: "daemon persisted the exact attestation",
+				requestId: "disposition-request",
+				dispositionedAt: 3,
+			});
+			const enforcementStatus = foldSkillEnforcementLedger(
+				templateMetadata.skillEnforcementContract,
+				childRuntime.session.sessionId,
+				childRuntime.session.sessionManager.getBranch(),
+			);
+			expect(enforcementStatus.passed).toBe(true);
+			enforcementResult = createSkillEnforcementResult(
+				enforcementStatus,
+				"passed",
+				childRuntime.session.sessionId,
+				123,
+			);
+			childRuntime.session.sessionManager.appendCustomEntry("prime.skill-enforcement-result/v1", enforcementResult);
+			childRuntime.session.sessionManager.flushNow();
+			const reopened = await SessionManager.openAsync(childState.runtime.session.sessionFile);
+			expect(reopened.getSessionId()).toBe(childRuntime.session.sessionId);
+			const reopenedStatus = foldSkillEnforcementLedger(
+				templateMetadata.skillEnforcementContract,
+				reopened.getSessionId(),
+				reopened.getBranch(),
+			);
+			expect(reopenedStatus).toEqual(enforcementStatus);
+			expect(
+				verifySkillEnforcementResultAgainstLedger(
+					enforcementResult,
+					templateMetadata.skillEnforcementContract,
+					reopened.getSessionId(),
+					reopened.getBranch(),
+				),
+			).toEqual(enforcementResult);
+			Object.assign(childRuntime.session, { getSkillEnforcementResult: () => enforcementResult });
 			const host = internals.createSubagentRuntimeHost(parentState);
 			expect(host.completeRlmSubagentRuntime?.("child-1", childRuntime.session)).toBe(true);
 			await (
@@ -802,7 +924,11 @@ describe("daemon mode helpers", () => {
 			).closeSession(childState, "shutdown");
 
 			expect((await internals.listPassiveRlmSubagents()).map(({ entry }) => entry.childId)).toContain("child-1");
-			expect((await internals.findPassiveRlmSubagent("real-worker"))?.entry.childId).toBe("child-1");
+			expect((await internals.findPassiveRlmSubagent("real-worker"))?.entry).toMatchObject({
+				childId: "child-1",
+				status: "completed",
+				skillEnforcementResult: enforcementResult,
+			});
 			const roster = await internals.createAgentMessageController(() => parentState).roster?.();
 			const passiveRosterEntry = roster?.entries.find((entry) => entry.name === "real-worker");
 			expect(passiveRosterEntry).toMatchObject({ relationship: "child", status: "inactive" });
@@ -813,8 +939,43 @@ describe("daemon mode helpers", () => {
 				[],
 			);
 			expect(listed).toContainEqual(
-				expect.objectContaining({ sessionFile: childState.runtime.session.sessionFile, rlmChildId: "child-1" }),
+				expect.objectContaining({
+					sessionFile: childState.runtime.session.sessionFile,
+					rlmChildId: "child-1",
+					rlmChildRegistryStatus: "completed",
+					skillEnforcementResult: enforcementResult,
+				}),
 			);
+
+			const passive = await internals.findPassiveRlmSubagent("real-worker");
+			if (!passive) throw new Error("Missing passive child");
+			const registryPath = join(parentManager.getSessionArtifactDir()!, "rlm-subagents.jsonl");
+			writeFileSync(
+				registryPath,
+				`${JSON.stringify({
+					...passive.entry,
+					skillEnforcementResult: {
+						...passive.entry.skillEnforcementResult,
+						attestationSha256: "0".repeat(64),
+					},
+				})}\n`,
+			);
+			const rejected = await internals.findPassiveRlmSubagent("real-worker");
+			expect(rejected?.entry.status).toBe("enforcement_failed");
+			expect(rejected?.entry.skillEnforcementResult).toBeUndefined();
+
+			const { skillEnforcementResult: _removed, ...withoutResult } = passive.entry;
+			writeFileSync(
+				registryPath,
+				`${JSON.stringify({
+					...withoutResult,
+					status: "completed",
+					skillEnforcementRequired: true,
+				})}\n`,
+			);
+			const missing = await internals.findPassiveRlmSubagent("real-worker");
+			expect(missing?.entry.status).toBe("enforcement_failed");
+			expect(missing?.entry.skillEnforcementResult).toBeUndefined();
 		} finally {
 			rmSync(tempDir, { recursive: true, force: true });
 		}

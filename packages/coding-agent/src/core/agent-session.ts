@@ -233,7 +233,13 @@ import {
 	type RlmSubagentRuntime,
 	type SubagentRuntimeHost,
 } from "./rlm-runtime.js";
-import { agentTemplateDigest, resolveResourceScope, ScopedResourceLoader } from "./scoped-resource-loader.js";
+import {
+	agentTemplateDigest,
+	type ResolvedSkillEnforcementContractV1,
+	readResolvedSkillEnforcementMethodBody,
+	resolveResourceScope,
+	ScopedResourceLoader,
+} from "./scoped-resource-loader.js";
 import {
 	ActionStore,
 	type ActionTicket,
@@ -257,6 +263,22 @@ import {
 } from "./session-manager.js";
 import type { SessionStats } from "./session-stats.js";
 import type { SettingsManager } from "./settings-manager.js";
+import {
+	cloneSkillEnforcementContractEntry,
+	createSkillActivationEntry,
+	createSkillDispositionEntry,
+	createSkillEnforcementResult,
+	foldSkillEnforcementLedger,
+	SKILL_ACTIVATION_CUSTOM_TYPE,
+	SKILL_DISPOSITION_CUSTOM_TYPE,
+	SKILL_ENFORCEMENT_CONTRACT_CUSTOM_TYPE,
+	SKILL_ENFORCEMENT_RESULT_CUSTOM_TYPE,
+	type SkillDispositionStatus,
+	type SkillEnforcementResultV1,
+	type SkillEnforcementStatusV1,
+	skillEnforcementRepairPrompt,
+	verifySkillEnforcementResultAgainstLedger,
+} from "./skill-enforcement.js";
 import { getPythonSkillRuntimeInfo, type Skill } from "./skills.js";
 import {
 	parseRefineCommandOptions,
@@ -278,7 +300,7 @@ export type { GoalState, GoalStatus } from "./goals.js";
 export type { SessionStats } from "./session-stats.js";
 export { type ParsedSkillBlock, parseSkillBlock } from "./skill-blocks.js";
 
-export type RlmChildAgentStatus = "queued" | "running" | "done" | "error" | "cancelled";
+export type RlmChildAgentStatus = "queued" | "running" | "done" | "enforcement_failed" | "error" | "cancelled";
 
 export interface RlmChildAgentActivity {
 	kind: "waiting" | "writing" | "executing";
@@ -417,6 +439,8 @@ export interface AgentSessionConfig {
 	scopedModels?: Array<{ model: Model<any>; thinkingLevel?: ThinkingLevel }>;
 	/** Resource loader for skills, prompts, themes, context files, system prompt */
 	resourceLoader: ResourceLoader;
+	/** Host-owned immutable method enforcement contract for this session. */
+	skillEnforcementContract?: ResolvedSkillEnforcementContractV1;
 	/** SDK custom tools registered outside extensions */
 	customTools?: ToolDefinition[];
 	/** Model registry for API key resolution and model discovery */
@@ -1170,6 +1194,8 @@ export class AgentSession {
 	private _modelSelectEmitContext = new AsyncLocalStorage<boolean>();
 
 	private _resourceLoader: ResourceLoader;
+	private readonly _skillEnforcementContract?: ResolvedSkillEnforcementContractV1;
+	private _skillEnforcementResult?: SkillEnforcementResultV1;
 	private _customTools: ToolDefinition[];
 	private _baseToolDefinitions: Map<string, ToolDefinition> = new Map();
 	private _cwd: string;
@@ -1191,7 +1217,8 @@ export class AgentSession {
 	private _extensionErrorListener?: ExtensionErrorListener;
 	private _extensionErrorUnsubscriber?: () => void;
 	private _disposed = false;
-	private readonly _disposeCallbacks = new Set<() => void>();
+	private readonly _disposeCallbacks = new Set<() => void | Promise<void>>();
+	private _disposeCallbacksPromise?: Promise<void>;
 	// Set at the start of async teardown so a child finishing mid-disposeAsync doesn't
 	// re-populate the retained map after it's been cleared.
 	private _disposing = false;
@@ -1290,6 +1317,46 @@ export class AgentSession {
 		this._serviceTierPreference = config.serviceTierPreference ?? config.agent.state.serviceTier;
 		this._scopedModels = config.scopedModels ?? [];
 		this._resourceLoader = config.resourceLoader;
+		this._skillEnforcementContract = config.skillEnforcementContract;
+		if (
+			this._skillEnforcementContract &&
+			!this.sessionManager
+				.getBranch()
+				.some(
+					(entry) =>
+						entry.type === "custom" &&
+						entry.customType === SKILL_ENFORCEMENT_CONTRACT_CUSTOM_TYPE &&
+						typeof entry.data === "object" &&
+						entry.data !== null &&
+						(entry.data as { contractSha256?: unknown }).contractSha256 ===
+							this._skillEnforcementContract?.contractSha256,
+				)
+		) {
+			this.sessionManager.appendCustomEntry(
+				SKILL_ENFORCEMENT_CONTRACT_CUSTOM_TYPE,
+				cloneSkillEnforcementContractEntry(this._skillEnforcementContract, this.sessionId),
+			);
+		}
+		if (this._skillEnforcementContract) {
+			const persistedResults = this.sessionManager
+				.getBranch()
+				.filter((entry) => entry.type === "custom" && entry.customType === SKILL_ENFORCEMENT_RESULT_CUSTOM_TYPE);
+			if (persistedResults.length > 1) {
+				throw new Error("Persisted skill enforcement ledger contains duplicate final results");
+			}
+			if (persistedResults.length === 1) {
+				const restored = verifySkillEnforcementResultAgainstLedger(
+					(persistedResults[0] as { data?: unknown }).data,
+					this._skillEnforcementContract,
+					this.sessionId,
+					this.sessionManager.getBranch(),
+				);
+				if (!restored) {
+					throw new Error("Persisted skill enforcement result is invalid or does not match the durable ledger");
+				}
+				this._skillEnforcementResult = restored;
+			}
+		}
 		this._customTools = config.customTools ?? [];
 		this._cwd = config.cwd;
 		this._agentDir = config.agentDir;
@@ -2812,6 +2879,126 @@ export class AgentSession {
 		}
 	}
 
+	private _skillUsageText(payload: Record<string, unknown>, field: string, maximum: number): string {
+		const value = payload[field];
+		if (typeof value !== "string" || value.trim().length === 0) {
+			throw new Error(`skill_usage ${field} must be a non-empty string`);
+		}
+		const normalized = value.trim();
+		if (normalized.length > maximum) {
+			throw new Error(`skill_usage ${field} must be at most ${maximum} characters`);
+		}
+		return normalized;
+	}
+
+	private _validateSkillUsagePayload(payload: Record<string, unknown>, allowed: readonly string[]): void {
+		const allowedKeys = new Set([...allowed, "cellSourceCode"]);
+		const unexpected = Object.keys(payload).find((key) => !allowedKeys.has(key));
+		if (unexpected) {
+			throw new Error(`skill_usage request contains unsupported field ${JSON.stringify(unexpected)}`);
+		}
+	}
+
+	getSkillEnforcementStatus(): SkillEnforcementStatusV1 {
+		return foldSkillEnforcementLedger(
+			this._skillEnforcementContract,
+			this.sessionId,
+			this.sessionManager.getBranch(),
+		);
+	}
+
+	getSkillEnforcementResult(): SkillEnforcementResultV1 | undefined {
+		return this._skillEnforcementResult ? structuredClone(this._skillEnforcementResult) : undefined;
+	}
+
+	private _recordSkillEnforcementResult(status: "passed" | "failed"): SkillEnforcementResultV1 | undefined {
+		if (!this._skillEnforcementContract) return undefined;
+		if (this._skillEnforcementResult) return this.getSkillEnforcementResult();
+		const result = createSkillEnforcementResult(this.getSkillEnforcementStatus(), status, this.sessionId);
+		this.sessionManager.appendCustomEntry(SKILL_ENFORCEMENT_RESULT_CUSTOM_TYPE, result);
+		this._skillEnforcementResult = result;
+		return this.getSkillEnforcementResult();
+	}
+
+	handleSkillUsageHostRequest(type: string, payload: Record<string, unknown> = {}): Record<string, unknown> {
+		const contract = this._skillEnforcementContract;
+		if (!contract) {
+			throw new Error("skill_usage is unavailable because this session has no resolved enforcement contract");
+		}
+		if (type === "skill_usage.status") {
+			this._validateSkillUsagePayload(payload, []);
+			return this.getSkillEnforcementStatus() as unknown as Record<string, unknown>;
+		}
+		if (this._skillEnforcementResult) {
+			throw new Error("skill_usage ledger is sealed after host attestation");
+		}
+		const name = this._skillUsageText(payload, "name", 160);
+		const method = contract.methods.find((candidate) => candidate.name === name);
+		if (!method) {
+			throw new Error(`skill_usage method ${JSON.stringify(name)} is outside this session's resolved contract`);
+		}
+		if (type === "skill_usage.activate") {
+			this._validateSkillUsagePayload(payload, ["name", "intent"]);
+			const intent = this._skillUsageText(payload, "intent", 2000);
+			const content = readResolvedSkillEnforcementMethodBody(method);
+			const activation = createSkillActivationEntry({
+				contract,
+				method,
+				sessionId: this.sessionId,
+				intent,
+				requestId: randomUUID(),
+			});
+			this.sessionManager.appendCustomEntry(SKILL_ACTIVATION_CUSTOM_TYPE, activation);
+			return {
+				schema: "prime.skill-activation-response/v1",
+				name: method.name,
+				sha256: method.sha256,
+				content,
+				activated_at: activation.activatedAt,
+				request_id: activation.requestId,
+			};
+		}
+		if (type === "skill_usage.disposition") {
+			this._validateSkillUsagePayload(payload, ["name", "status", "evidence", "summary"]);
+			const current = this.getSkillEnforcementStatus();
+			if (!current.activatedMethods.includes(name)) {
+				throw new Error(`skill_usage method ${JSON.stringify(name)} must be activated before disposition`);
+			}
+			if (current.appliedMethods.includes(name) || current.notApplicableMethods.includes(name)) {
+				throw new Error(`skill_usage method ${JSON.stringify(name)} already has a final disposition`);
+			}
+			const dispositionStatus = payload.status;
+			if (dispositionStatus !== "applied" && dispositionStatus !== "not_applicable") {
+				throw new Error('skill_usage status must be "applied" or "not_applicable"');
+			}
+			if (!Array.isArray(payload.evidence) || payload.evidence.length > 64) {
+				throw new Error("skill_usage evidence must be an array with at most 64 entries");
+			}
+			const evidence = payload.evidence.map((value, index) => {
+				if (typeof value !== "string" || value.trim().length === 0 || value.trim().length > 2000) {
+					throw new Error(`skill_usage evidence[${index}] must be a non-empty string of at most 2000 characters`);
+				}
+				return value.trim();
+			});
+			if (dispositionStatus === "applied" && evidence.length === 0) {
+				throw new Error("skill_usage applied disposition requires at least one evidence reference");
+			}
+			const summary = this._skillUsageText(payload, "summary", 4000);
+			const disposition = createSkillDispositionEntry({
+				contract,
+				method,
+				sessionId: this.sessionId,
+				status: dispositionStatus as SkillDispositionStatus,
+				evidence,
+				summary,
+				requestId: randomUUID(),
+			});
+			this.sessionManager.appendCustomEntry(SKILL_DISPOSITION_CUSTOM_TYPE, disposition);
+			return this.getSkillEnforcementStatus() as unknown as Record<string, unknown>;
+		}
+		throw new Error(`Unknown skill_usage host request ${JSON.stringify(type)}`);
+	}
+
 	/**
 	 * Handle a goal.* request from the IPython kernel host bridge (the bundled
 	 * goal skill). All goal state stays host-side; the kernel only sees the
@@ -3771,7 +3958,7 @@ export class AgentSession {
 	 */
 	async disposeAsync(): Promise<void> {
 		if (this._disposed) {
-			return;
+			return this._disposeCallbacksPromise;
 		}
 		// Concurrent callers await the same in-flight teardown so none resolves before
 		// the kernel snapshot flush finishes.
@@ -3783,7 +3970,7 @@ export class AgentSession {
 			// agent_end completes instead of being aborted by dispose().
 			await this._drainPendingRefinementForDisposal();
 			if (this._disposed) {
-				return;
+				return this._disposeCallbacksPromise;
 			}
 			this._disposing = true;
 			this._sessionActionCommitDisposeAbortController.abort();
@@ -3952,6 +4139,27 @@ export class AgentSession {
 			// Sidecar cleanup is best-effort; sync disposal below is the final guard.
 		}
 		this.dispose();
+		await this._disposeCallbacksPromise;
+	}
+
+	private _startDisposeCallbacks(): Promise<void> {
+		if (this._disposeCallbacksPromise) {
+			return this._disposeCallbacksPromise;
+		}
+		const pending: Promise<void>[] = [];
+		for (const callback of this._disposeCallbacks) {
+			try {
+				const result = callback();
+				if (result) {
+					pending.push(result.catch(() => undefined));
+				}
+			} catch {
+				// Disposal remains best-effort; one owner must not block the rest.
+			}
+		}
+		this._disposeCallbacks.clear();
+		this._disposeCallbacksPromise = Promise.all(pending).then(() => undefined);
+		return this._disposeCallbacksPromise;
 	}
 
 	dispose(): void {
@@ -4003,20 +4211,18 @@ export class AgentSession {
 			this._eventListeners = [];
 			cleanupSessionResources(this.sessionId);
 		} finally {
-			for (const callback of this._disposeCallbacks) {
-				try {
-					callback();
-				} catch {
-					// Disposal remains best-effort; one owner must not block the rest.
-				}
-			}
-			this._disposeCallbacks.clear();
+			void this._startDisposeCallbacks();
 		}
 	}
 
-	registerDisposeCallback(callback: () => void): void {
+	registerDisposeCallback(callback: () => void | Promise<void>): void {
 		if (this._disposed) {
-			callback();
+			try {
+				const result = callback();
+				if (result) void result.catch(() => undefined);
+			} catch {
+				// Late registration follows the same best-effort disposal contract.
+			}
 			return;
 		}
 		this._disposeCallbacks.add(callback);
@@ -8517,13 +8723,7 @@ export class AgentSession {
 			options?.activeToolNames ? [...options.activeToolNames] : [...previousActiveToolNames]
 		).filter((name) => isAllowedTool(name));
 
-		if (allowedToolNames) {
-			for (const toolName of this._toolRegistry.keys()) {
-				if (allowedToolNames.has(toolName)) {
-					nextActiveToolNames.push(toolName);
-				}
-			}
-		} else if (options?.includeAllExtensionTools) {
+		if (options?.includeAllExtensionTools && !allowedToolNames) {
 			for (const tool of wrappedExtensionTools) {
 				nextActiveToolNames.push(tool.name);
 			}
@@ -8680,6 +8880,12 @@ export class AgentSession {
 				input: this.model?.input ?? [],
 			}),
 		};
+		if (this._skillEnforcementContract) {
+			for (const type of ["skill_usage.activate", "skill_usage.disposition", "skill_usage.status"]) {
+				handlers[type] = async ({ type: _requestType, cellSourceCode: _cellSourceCode, ...payload }) =>
+					this.handleSkillUsageHostRequest(type, payload);
+			}
+		}
 		if (this._includeGoals) {
 			for (const type of ["goal.get", "goal.create", "goal.complete"]) {
 				handlers[type] = async (payload) => this.handleGoalHostRequest(type, payload);
@@ -9001,6 +9207,7 @@ export class AgentSession {
 			resourceLoader: options.resourceScope
 				? new ScopedResourceLoader(this._resourceLoader, options.resourceScope)
 				: this._resourceLoader,
+			skillEnforcementContract: options.resourceScope?.skillEnforcementContract,
 			customTools: options.customTools,
 			modelRegistry: this._modelRegistry,
 			initialActiveToolNames: options.activeToolNames,
@@ -9100,13 +9307,22 @@ export class AgentSession {
 				continue;
 			}
 			const daemonChild = daemonChildren.get(run.id);
+			const enforcementResult = run.session?.getSkillEnforcementResult();
 			subagents.push({
 				rlm_child_id: run.id,
 				active_session_id: daemonChild?.activeSessionId ?? null,
 				session_id: daemonChild?.sessionId ?? run.session?.sessionId ?? null,
 				session_name: daemonChild?.sessionName ?? run.session?.sessionName ?? run.sessionName,
 				session_dir: run.sessionDir,
-				status: run.status === "done" ? "completed" : run.status === "error" ? "error" : "running",
+				status:
+					run.status === "done"
+						? "completed"
+						: run.status === "enforcement_failed"
+							? "enforcement_failed"
+							: run.status === "error"
+								? "error"
+								: "running",
+				...(enforcementResult ? { skill_enforcement_result: enforcementResult } : {}),
 			});
 			recorded.add(run.id);
 		}
@@ -9119,6 +9335,7 @@ export class AgentSession {
 				continue;
 			}
 			const daemonChild = daemonChildren.get(childId);
+			const enforcementResult = childSession.getSkillEnforcementResult();
 			const sessionDir = childSession._rlmSessionDir;
 			if (!sessionDir) {
 				continue;
@@ -9130,7 +9347,8 @@ export class AgentSession {
 				session_name:
 					daemonChild?.sessionName ?? childSession.sessionName ?? createDefaultRlmSubagentSessionName("", childId),
 				session_dir: sessionDir,
-				status: "completed",
+				status: enforcementResult?.status === "failed" ? "enforcement_failed" : "completed",
+				...(enforcementResult ? { skill_enforcement_result: enforcementResult } : {}),
 			});
 			recorded.add(childId);
 		}
@@ -9150,7 +9368,20 @@ export class AgentSession {
 				session_id: daemonChild.sessionId,
 				session_name: daemonChild.sessionName ?? createDefaultRlmSubagentSessionName("", childId),
 				session_dir: daemonChild.sessionDir,
-				status: daemonChild.rlmChildRegistryStatus === "completed" ? "completed" : "error",
+				status:
+					daemonChild.rlmChildRegistryStatus === "completed"
+						? "completed"
+						: daemonChild.rlmChildRegistryStatus === "enforcement_failed"
+							? "enforcement_failed"
+							: daemonChild.rlmChildRegistryStatus === "running" &&
+									(daemonChild.isStreaming ||
+										daemonChild.unfinishedActionCount > 0 ||
+										daemonChild.status === "running")
+								? "running"
+								: "error",
+				...(daemonChild.skillEnforcementResult
+					? { skill_enforcement_result: daemonChild.skillEnforcementResult }
+					: {}),
 			});
 		}
 		return { subagents };
@@ -9555,7 +9786,12 @@ export class AgentSession {
 	}
 
 	private async _authenticatedRlmModels(): Promise<Model<Api>[]> {
+		const scopedSelectors =
+			this._scopedModels.length > 0
+				? new Set(this._scopedModels.map(({ model }) => `${model.provider}/${model.id}`.toLowerCase()))
+				: undefined;
 		return (await this._modelRegistry.getExecutableModels()).filter((model) => {
+			if (scopedSelectors && !scopedSelectors.has(`${model.provider}/${model.id}`.toLowerCase())) return false;
 			const status = this._modelRegistry.getProviderAuthStatus(model.provider);
 			return status.source !== "stale" && status.label !== "expired";
 		});
@@ -9616,6 +9852,7 @@ export class AgentSession {
 					templateId: template.id,
 					promptAppend: template.promptAppend,
 					...(template.skills ? { skills: template.skills } : {}),
+					...(template.skillEnforcement ? { skillEnforcement: template.skillEnforcement } : {}),
 				})
 			: undefined;
 		const availableToolNames = new Set(this.getAllTools().map((tool) => tool.name));
@@ -9633,6 +9870,17 @@ export class AgentSession {
 		for (const toolName of template?.activeToolNames ?? []) {
 			if (templateAllowedToolNames && !templateAllowedToolNames.has(toolName)) {
 				throw new Error(`Agent template "${template?.id}" activates tool "${toolName}" outside its allowlist`);
+			}
+		}
+		if (resourceScope?.skillEnforcementContract) {
+			if (!template?.activeToolNames?.includes("ipython")) {
+				throw new Error(`Agent template "${template?.id}" requires active ipython for skill enforcement`);
+			}
+			const skillUsage = this._resourceLoader
+				.getSkills()
+				.skills.find((skill) => skill.name === "skill-usage" && !skill.disableModelInvocation);
+			if (!skillUsage) {
+				throw new Error(`Agent template "${template?.id}" requires the unavailable skill-usage host skill`);
 			}
 		}
 		if (requestedSessionName) assertDirectAgentMessageTarget(requestedSessionName);
@@ -9755,6 +10003,9 @@ export class AgentSession {
 							promptSha256: createHash("sha256").update(template.promptAppend).digest("hex"),
 							skillNames: [...(template.skills?.include ?? [])],
 							skillSnapshots: (resourceScope?.skillSnapshots ?? []).map((snapshot) => ({ ...snapshot })),
+							...(resourceScope?.skillEnforcementContract
+								? { skillEnforcementContract: resourceScope.skillEnforcementContract }
+								: {}),
 							thinkingLevel,
 							activeToolNames: [...activeToolNames],
 							...(allowedToolNames ? { allowedToolNames: [...allowedToolNames] } : {}),
@@ -9889,11 +10140,47 @@ export class AgentSession {
 					customMessage: spawnMessage,
 				});
 				if (run.error) throw new Error(run.error);
-				run.status = "done";
+				throwIfCancelled();
+				let enforcementStatus = child.getSkillEnforcementStatus();
+				const repairLimit = child._skillEnforcementContract?.maxRepairTurns ?? 0;
+				for (
+					let repairTurn = 0;
+					enforcementStatus.required && !enforcementStatus.passed && repairTurn < repairLimit;
+					repairTurn += 1
+				) {
+					await child.promptAndWait(skillEnforcementRepairPrompt(enforcementStatus), {
+						expandPromptTemplates: false,
+						source: "extension",
+					});
+					if (run.error) throw new Error(run.error);
+					throwIfCancelled();
+					enforcementStatus = child.getSkillEnforcementStatus();
+				}
+				if (enforcementStatus.required && !enforcementStatus.passed) {
+					child._recordSkillEnforcementResult("failed");
+					run.status = "enforcement_failed";
+					run.error = "Required method activation/disposition remained incomplete after bounded repair";
+				} else {
+					if (enforcementStatus.required) child._recordSkillEnforcementResult("passed");
+					run.status = "done";
+				}
 				durationMs = Date.now() - startedAt;
 				activity = undefined;
 				emitChildUpdate();
-				if (!run.detachedDeletion && child._parentReplyCount === parentReplyCountBeforeRun) {
+				if (run.status === "enforcement_failed") {
+					await deliverTerminalMessageToParent(
+						createRlmChildFailureMessage({
+							childId: run.id,
+							sessionName,
+							error: run.error ?? "skill enforcement failed",
+						}),
+					);
+				}
+				if (
+					run.status === "done" &&
+					!run.detachedDeletion &&
+					child._parentReplyCount === parentReplyCountBeforeRun
+				) {
 					const lastAssistantText = child.getLastAssistantText();
 					await deliverTerminalMessageToParent(
 						createRlmChildTerminalNoticeMessage({

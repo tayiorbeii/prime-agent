@@ -527,7 +527,13 @@ export interface AgentConnectionExtensionUiRequest {
 	payload: Record<string, unknown>;
 }
 
-export type AgentConnectionRlmChildAgentStatus = "queued" | "running" | "done" | "error" | "cancelled";
+export type AgentConnectionRlmChildAgentStatus =
+	| "queued"
+	| "running"
+	| "done"
+	| "enforcement_failed"
+	| "error"
+	| "cancelled";
 
 export interface AgentConnectionRlmChildAgentActivity {
 	kind: "waiting" | "writing" | "executing";

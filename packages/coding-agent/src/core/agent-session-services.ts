@@ -4,6 +4,7 @@ import type { Model, ServiceTier } from "@earendil-works/pi-ai";
 import { getAgentDir } from "../config.js";
 import type { AgentSessionMessageController } from "./agent-messages.js";
 import type { AgentObserveController } from "./agent-observe.js";
+import type { AgentExecutionMode } from "./agent-session-config.js";
 import { installAgentTraceUpload } from "./agent-traces.js";
 import { AuthStorage } from "./auth-storage.js";
 import type { AgentAutonomousConfig } from "./autonomous.js";
@@ -14,10 +15,16 @@ import { McpManager } from "./mcp/mcp-manager.js";
 import { ModelRegistry } from "./model-registry.js";
 import { DefaultResourceLoader, type DefaultResourceLoaderOptions, type ResourceLoader } from "./resource-loader.js";
 import type { RlmAgentTemplateMetadata, SubagentRuntimeHost } from "./rlm-runtime.js";
-import { type ResolvedResourceScope, restoreResourceScope, ScopedResourceLoader } from "./scoped-resource-loader.js";
+import {
+	type ResolvedResourceScope,
+	type ResolvedSkillEnforcementContractV1,
+	restoreResourceScope,
+	ScopedResourceLoader,
+} from "./scoped-resource-loader.js";
 import { type CreateAgentSessionResult, createAgentSession } from "./sdk.js";
 import type { SessionManager } from "./session-manager.js";
 import { SettingsManager } from "./settings-manager.js";
+import { installAgentTelemetry, isTelemetryEnabled } from "./telemetry.js";
 
 /**
  * Non-fatal issues collected while creating services or sessions.
@@ -53,6 +60,8 @@ export interface CreateAgentSessionServicesOptions {
 	 * would release the pane while the parent is still running.
 	 */
 	noBuiltinHerdrReporter?: boolean;
+	/** Explicit daemon-carried opt-out; cannot enable telemetry. */
+	telemetryDisabled?: true;
 }
 
 export interface AgentSessionCreationOptions {
@@ -68,6 +77,8 @@ export interface AgentSessionCreationOptions {
 	allowedToolNames?: string[];
 	/** Immutable child-only skills and supplemental prompt resolved before admission. */
 	resourceScope?: ResolvedResourceScope;
+	/** Resolved host-owned method enforcement contract for this child session. */
+	skillEnforcementContract?: ResolvedSkillEnforcementContractV1;
 	includeGoals?: boolean;
 	includeCompactSkill?: boolean;
 	agentMessageController?: AgentSessionMessageController;
@@ -83,6 +94,10 @@ export interface AgentSessionCreationOptions {
 	autonomous?: AgentAutonomousConfig;
 	/** Serialized refine mode for print/headless autonomous runs. */
 	serializedRefine?: boolean;
+	/** User-facing client mode that created the top-level session. */
+	executionMode?: AgentExecutionMode;
+	/** Explicit daemon-carried opt-out; cannot enable telemetry. */
+	telemetryDisabled?: true;
 	/** Initial goal to seed at session creation (rlmDepth 0 only, idempotent). */
 	initialGoal?: { objective: string; tokenBudget?: number };
 }
@@ -211,6 +226,18 @@ export async function createAgentSessionServices(
 	await resourceLoader.reload();
 
 	const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
+	if (
+		!options.telemetryDisabled &&
+		isTelemetryEnabled(settingsManager) &&
+		!settingsManager.getTelemetryNoticeShown()
+	) {
+		diagnostics.push({
+			type: "info",
+			message:
+				"Prime Agent sends pseudonymous usage and performance metrics without prompts, responses, tool content, file paths, or repository data. Disable this with telemetry.enabled=false, PRIME_AGENT_TELEMETRY=0, DO_NOT_TRACK=1, or offline mode.",
+		});
+		settingsManager.setTelemetryNoticeShown(true);
+	}
 	const extensionsResult = resourceLoader.getExtensions();
 	for (const { name, config, extensionPath } of extensionsResult.runtime.pendingProviderRegistrations) {
 		try {
@@ -270,6 +297,21 @@ function persistedTemplateIdentity(sessionManager: SessionManager): RlmAgentTemp
 				typeof snapshot.filePath === "string" &&
 				typeof snapshot.sha256 === "string",
 		) ||
+		(data.skillEnforcementContract !== undefined &&
+			(data.skillEnforcementContract.schema !== "prime.skill-enforcement-contract/v1" ||
+				typeof data.skillEnforcementContract.templateId !== "string" ||
+				typeof data.skillEnforcementContract.contractSha256 !== "string" ||
+				!Array.isArray(data.skillEnforcementContract.methods) ||
+				!data.skillEnforcementContract.methods.every(
+					(method) =>
+						typeof method === "object" &&
+						method !== null &&
+						typeof method.name === "string" &&
+						typeof method.filePath === "string" &&
+						typeof method.sha256 === "string",
+				) ||
+				!Number.isSafeInteger(data.skillEnforcementContract.maxRepairTurns) ||
+				data.skillEnforcementContract.maxRepairTurns < 0)) ||
 		!(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as unknown[]).includes(data.thinkingLevel) ||
 		!Array.isArray(data.activeToolNames) ||
 		!data.activeToolNames.every((name) => typeof name === "string") ||
@@ -300,6 +342,7 @@ export async function createAgentSessionFromServices(
 		resourceLoader: resourceScope
 			? new ScopedResourceLoader(options.services.resourceLoader, resourceScope)
 			: options.services.resourceLoader,
+		skillEnforcementContract: resourceScope?.skillEnforcementContract,
 		mcpManager: options.services.mcpManager,
 		sessionManager: options.sessionManager,
 		model: options.model,
@@ -342,6 +385,13 @@ export async function createAgentSessionFromServices(
 				`Persisted agent template ${JSON.stringify(identity.templateId)} runtime policy is incompatible; start a fresh child`,
 			);
 		}
+	}
+	if (result.session.rlmDepth === 0 && !options.telemetryDisabled) {
+		installAgentTelemetry(result.session, {
+			agentDir: options.services.agentDir,
+			settingsManager: options.services.settingsManager,
+			executionMode: options.executionMode,
+		});
 	}
 	return result;
 }

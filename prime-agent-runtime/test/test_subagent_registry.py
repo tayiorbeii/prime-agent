@@ -61,6 +61,44 @@ class RlmSubagentRegistryTest(unittest.TestCase):
 
         self.assertEqual(subagents[0].status, "error")
 
+    def test_lists_enforcement_failed_subagents_with_host_attestation(self) -> None:
+        result = {
+            "schema": "prime.skill-enforcement-result/v1",
+            "status": "failed",
+            "templateId": "prime/persona-team/reviewer",
+            "contractSha256": "contract",
+            "activatedMethods": ["method-a"],
+            "appliedMethods": [],
+            "notApplicableMethods": [],
+            "methodCount": 2,
+            "missingMethods": ["method-b"],
+            "invalidRecordCount": 0,
+            "evidenceCount": 0,
+            "completedAt": 10,
+            "attestationSha256": "attestation",
+        }
+        host_request = AsyncMock(
+            return_value={
+                "subagents": [
+                    {
+                        "rlm_child_id": "sub-enforcement",
+                        "active_session_id": None,
+                        "session_id": "session-enforcement",
+                        "session_name": "enforcement-worker",
+                        "session_dir": "/tmp/parent/sub-enforcement",
+                        "status": "enforcement_failed",
+                        "skill_enforcement_result": result,
+                    }
+                ]
+            }
+        )
+
+        with patch.object(rlm_module, "host_request", host_request):
+            subagents = asyncio.run(rlm_module.rlm.list_subagents())
+
+        self.assertEqual(subagents[0].status, "enforcement_failed")
+        self.assertEqual(subagents[0].skill_enforcement_result, result)
+
     def test_forwards_orchestrator_chosen_name_and_model_to_host(self) -> None:
         host_request = AsyncMock(
             return_value={

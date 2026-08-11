@@ -376,6 +376,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		agentDir: options.agentDir,
 		scopedModels: options.scopedModels,
 		resourceLoader,
+		skillEnforcementContract: options.skillEnforcementContract,
 		customTools: options.customTools,
 		modelRegistry,
 		mcpManager,
