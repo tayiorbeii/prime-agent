@@ -101,7 +101,10 @@ import {
 import { ORPHAN_PROCESS_JOURNAL_ENV } from "../../core/orphan-process-journal.js";
 import { PromptAdmissionCancelledError, waitForPromptAdmission } from "../../core/prompt-admission.js";
 import type { CreateRlmSubagentRuntimeOptions, SubagentRuntimeHost } from "../../core/rlm-runtime.js";
-import type { SkillEnforcementResultV1 } from "../../core/skill-enforcement.js";
+import {
+	type PersistedResourceScopeIdentity,
+	verifyPersistedSkillEnforcementContract,
+} from "../../core/scoped-resource-loader.js";
 import {
 	canPassivateSession,
 	type IdleEvictionMinutes,
@@ -118,6 +121,8 @@ import {
 import { resolveSessionPath } from "../../core/session-resolver.js";
 import type { SessionStats } from "../../core/session-stats.js";
 import { type SideQuestionRun, startSideQuestion } from "../../core/side-question.js";
+import type { SkillEnforcementResultV1 } from "../../core/skill-enforcement.js";
+import { verifySkillEnforcementResultAgainstLedger } from "../../core/skill-enforcement.js";
 import { killTrackedDetachedChildren } from "../../utils/shell.js";
 import {
 	createAgentConnectionCommands,
@@ -201,11 +206,6 @@ import {
 	SESSION_LEASE_OWNER_ID_ENV,
 	SESSION_LEASES_ENABLED_ENV,
 } from "./daemon-worker-protocol.js";
-import {
-	type PersistedResourceScopeIdentity,
-	verifyPersistedSkillEnforcementContract,
-} from "../../core/scoped-resource-loader.js";
-import { verifySkillEnforcementResultAgainstLedger } from "../../core/skill-enforcement.js";
 import { MutationDrainLatch } from "./mutation-drain-latch.js";
 import { serializeSavedSessionInfo } from "./saved-session-info.js";
 import {
@@ -1008,9 +1008,7 @@ export class AgentDaemon {
 			const manager = await SessionManager.openAsync(entry.sessionFile);
 			const branch = manager.getBranch();
 			const metadataEntries = branch.filter(
-				(candidate) =>
-					candidate.type === "custom" &&
-					candidate.customType === "prime.agent-template-resolution/v1",
+				(candidate) => candidate.type === "custom" && candidate.customType === "prime.agent-template-resolution/v1",
 			);
 			if (metadataEntries.length === 0) {
 				if (entry.skillEnforcementRequired) throw new Error("missing template resolution metadata");
@@ -1082,8 +1080,7 @@ export class AgentDaemon {
 						entry.status !== "completed" &&
 						entry.status !== "enforcement_failed" &&
 						entry.status !== "deleted") ||
-					(entry.skillEnforcementRequired !== undefined &&
-						typeof entry.skillEnforcementRequired !== "boolean") ||
+					(entry.skillEnforcementRequired !== undefined && typeof entry.skillEnforcementRequired !== "boolean") ||
 					(entry.rlmDepth !== undefined && (!Number.isSafeInteger(entry.rlmDepth) || entry.rlmDepth < 0)) ||
 					(entry.rlmMaxDepth !== undefined && (!Number.isSafeInteger(entry.rlmMaxDepth) || entry.rlmMaxDepth < 0))
 				) {
@@ -4996,10 +4993,10 @@ export class AgentDaemon {
 			...(metadata.rlmChildId ? { rlmChildId: metadata.rlmChildId } : {}),
 			...(skillEnforcementResult
 				? {
-					rlmChildRegistryStatus:
-						skillEnforcementResult.status === "failed" ? "enforcement_failed" : "completed",
-					skillEnforcementResult,
-				}
+						rlmChildRegistryStatus:
+							skillEnforcementResult.status === "failed" ? "enforcement_failed" : "completed",
+						skillEnforcementResult,
+					}
 				: {}),
 			...(metadata.sessionDir ? { sessionDir: metadata.sessionDir } : {}),
 			...(session.sessionFile ? { sessionPath: session.sessionFile } : {}),

@@ -27,7 +27,7 @@ import { dirname, join } from "path";
 import { type Static, type TProperties, Type } from "typebox";
 import type { Validator } from "typebox/compile";
 import type { TLocalizedValidationError } from "typebox/error";
-import { getAgentDir, VERSION } from "../config.js";
+import { getAgentDir } from "../config.js";
 import type { AuthSourceToken, AuthStatus, AuthStorage } from "./auth-storage.js";
 import { PRIME_INFERENCE_PROVIDER_ID } from "./prime-inference-auth.js";
 import {

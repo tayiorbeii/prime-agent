@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ResolvedSkillEnforcementContractV1 } from "../src/core/scoped-resource-loader.js";
 import {
 	cloneSkillEnforcementContractEntry,
 	createSkillActivationEntry,
@@ -12,7 +13,6 @@ import {
 	verifySkillEnforcementResult,
 	verifySkillEnforcementResultAgainstLedger,
 } from "../src/core/skill-enforcement.js";
-import type { ResolvedSkillEnforcementContractV1 } from "../src/core/scoped-resource-loader.js";
 
 const sessionId = "session-1";
 const contract: ResolvedSkillEnforcementContractV1 = {
@@ -200,13 +200,17 @@ describe("skill enforcement ledger", () => {
 		]);
 		expect(status.passed).toBe(false);
 		expect(status.invalidRecords).toContainEqual(
-			expect.objectContaining({ kind: "disposition", methodName: method.name, reason: "duplicate final disposition" }),
+			expect.objectContaining({
+				kind: "disposition",
+				methodName: method.name,
+				reason: "duplicate final disposition",
+			}),
 		);
 	});
 
 	it("treats non-enforced sessions as passed without an attestation", () => {
 		const status = foldSkillEnforcementLedger(undefined, sessionId, []);
 		expect(status).toMatchObject({ required: false, passed: true, methodCount: 0 });
-		expect(() => createSkillEnforcementResult(status, "passed", 1)).toThrow(/without a resolved/);
+		expect(() => createSkillEnforcementResult(status, "passed", sessionId, 1)).toThrow(/without a resolved/);
 	});
 });

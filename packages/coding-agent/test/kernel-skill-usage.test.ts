@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { getBundledSkillsDir } from "../src/config.js";
-import { IpythonKernelProvisioner } from "../src/core/tools/ipython.js";
 import type { PythonSkillRuntimeInfo } from "../src/core/skills.js";
+import { IpythonKernelProvisioner } from "../src/core/tools/ipython.js";
 
 function bundledSkillUsage(): PythonSkillRuntimeInfo {
 	const packagePath = join(getBundledSkillsDir(), "skill-usage");

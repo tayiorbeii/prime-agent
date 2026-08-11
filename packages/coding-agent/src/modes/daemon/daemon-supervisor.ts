@@ -3121,12 +3121,8 @@ export class DaemonSupervisor {
 			...(summary.rlmDepth !== undefined ? { rlmDepth: summary.rlmDepth } : {}),
 			status: classifySessionRosterStatus(summary),
 			...(summary.rlmChildId ? { rlmChildId: summary.rlmChildId } : {}),
-			...(summary.rlmChildRegistryStatus
-				? { rlmChildRegistryStatus: summary.rlmChildRegistryStatus }
-				: {}),
-			...(summary.skillEnforcementResult
-				? { skillEnforcementResult: summary.skillEnforcementResult }
-				: {}),
+			...(summary.rlmChildRegistryStatus ? { rlmChildRegistryStatus: summary.rlmChildRegistryStatus } : {}),
+			...(summary.skillEnforcementResult ? { skillEnforcementResult: summary.skillEnforcementResult } : {}),
 		};
 	}
 

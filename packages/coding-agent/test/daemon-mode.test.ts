@@ -14,11 +14,6 @@ import {
 } from "../src/core/agent-messages.js";
 import type { AgentObserveController } from "../src/core/agent-observe.js";
 import type { CreateAgentSessionRuntimeFactory } from "../src/core/agent-session-runtime.js";
-import {
-	createSkillEnforcementResult,
-	foldSkillEnforcementLedger,
-	verifySkillEnforcementResultAgainstLedger,
-} from "../src/core/skill-enforcement.js";
 import type { AgentCronJob, AgentCronJobStore } from "../src/core/cron-jobs.js";
 import {
 	type CreateRlmSubagentRuntimeOptions,
@@ -27,6 +22,11 @@ import {
 } from "../src/core/rlm-runtime.js";
 import { canonicalSessionPath } from "../src/core/session-lease.js";
 import { readSessionInfo, type SessionInfo, SessionManager } from "../src/core/session-manager.js";
+import {
+	createSkillEnforcementResult,
+	foldSkillEnforcementLedger,
+	verifySkillEnforcementResultAgainstLedger,
+} from "../src/core/skill-enforcement.js";
 import type { ActiveSessionState, DaemonSocketClient } from "../src/modes/daemon/active-session-state.js";
 import {
 	AgentDaemon,
@@ -757,8 +757,25 @@ describe("daemon mode helpers", () => {
 					options: CreateRlmSubagentRuntimeOptions,
 				): Promise<ActiveSessionState["runtime"]>;
 				createSubagentRuntimeHost(parentState: ActiveSessionState): SubagentRuntimeHost;
-				listPassiveRlmSubagents(): Promise<Array<{ entry: { childId: string } }>>;
-				findPassiveRlmSubagent(target: string): Promise<{ entry: { childId: string } } | undefined>;
+				listPassiveRlmSubagents(): Promise<
+					Array<{
+						entry: {
+							childId: string;
+							status?: string;
+							skillEnforcementResult?: ReturnType<typeof createSkillEnforcementResult>;
+						};
+					}>
+				>;
+				findPassiveRlmSubagent(target: string): Promise<
+					| {
+							entry: {
+								childId: string;
+								status?: string;
+								skillEnforcementResult?: ReturnType<typeof createSkillEnforcementResult>;
+							};
+					  }
+					| undefined
+				>;
 				createAgentMessageController(
 					getCurrentState: () => ActiveSessionState | undefined,
 				): AgentSessionMessageController;
@@ -801,9 +818,7 @@ describe("daemon mode helpers", () => {
 				skillSnapshots: [{ name: "method-one", filePath: "/skills/method-one/SKILL.md", sha256: "c".repeat(64) }],
 				skillEnforcementContract: {
 					...enforcementContractHashInput,
-					contractSha256: createHash("sha256")
-						.update(JSON.stringify(enforcementContractHashInput))
-						.digest("hex"),
+					contractSha256: createHash("sha256").update(JSON.stringify(enforcementContractHashInput)).digest("hex"),
 				},
 				thinkingLevel: "off" as const,
 				activeToolNames: [],
@@ -829,9 +844,7 @@ describe("daemon mode helpers", () => {
 			});
 			const persistedTemplate = childRuntime.session.sessionManager
 				.getEntries()
-				.find(
-					(entry) => entry.type === "custom" && entry.customType === "prime.agent-template-resolution/v1",
-				);
+				.find((entry) => entry.type === "custom" && entry.customType === "prime.agent-template-resolution/v1");
 			expect(persistedTemplate?.type === "custom" ? persistedTemplate.data : undefined).toEqual(templateMetadata);
 			const childState = [...internals.sessions.values()].find(
 				(state) => state.runtime.session === childRuntime.session,
@@ -843,7 +856,9 @@ describe("daemon mode helpers", () => {
 				sessionId: childRuntime.session.sessionId,
 				templateId: templateMetadata.templateId,
 				contractSha256: templateMetadata.skillEnforcementContract.contractSha256,
-				methods: [{ name: enforcementMethod.name, filePath: enforcementMethod.filePath, sha256: enforcementMethod.sha256 }],
+				methods: [
+					{ name: enforcementMethod.name, filePath: enforcementMethod.filePath, sha256: enforcementMethod.sha256 },
+				],
 				maxRepairTurns: 2,
 				createdAt: 1,
 			});

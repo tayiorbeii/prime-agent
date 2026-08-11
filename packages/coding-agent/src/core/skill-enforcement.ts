@@ -287,7 +287,10 @@ export function foldSkillEnforcementLedger(
 	const notApplicableMethods = methodNames.filter((name) => dispositions.get(name)?.status === "not_applicable");
 	const missingActivations = methodNames.filter((name) => !activations.has(name));
 	const missingDispositions = methodNames.filter((name) => !dispositions.has(name));
-	const evidenceCount = appliedMethods.reduce((count, name) => count + (dispositions.get(name)?.evidence.length ?? 0), 0);
+	const evidenceCount = appliedMethods.reduce(
+		(count, name) => count + (dispositions.get(name)?.evidence.length ?? 0),
+		0,
+	);
 	return {
 		schema: "prime.skill-enforcement-status/v1",
 		required: true,
@@ -301,10 +304,7 @@ export function foldSkillEnforcementLedger(
 		missingDispositions,
 		invalidRecords,
 		evidenceCount,
-		passed:
-			missingActivations.length === 0 &&
-			missingDispositions.length === 0 &&
-			invalidRecords.length === 0,
+		passed: missingActivations.length === 0 && missingDispositions.length === 0 && invalidRecords.length === 0,
 	};
 }
 
@@ -384,7 +384,9 @@ export function verifySkillEnforcementResult(
 	const notApplicableMethods = [...value.notApplicableMethods] as string[];
 	const missingMethods = [...value.missingMethods] as string[];
 	if (
-		![...activatedMethods, ...appliedMethods, ...notApplicableMethods, ...missingMethods].every((name) => allowed.has(name)) ||
+		![...activatedMethods, ...appliedMethods, ...notApplicableMethods, ...missingMethods].every((name) =>
+			allowed.has(name),
+		) ||
 		new Set(activatedMethods).size !== activatedMethods.length ||
 		new Set(appliedMethods).size !== appliedMethods.length ||
 		new Set(notApplicableMethods).size !== notApplicableMethods.length ||

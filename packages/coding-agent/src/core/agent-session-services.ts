@@ -385,6 +385,7 @@ export async function createAgentSessionFromServices(
 				`Persisted agent template ${JSON.stringify(identity.templateId)} runtime policy is incompatible; start a fresh child`,
 			);
 		}
+	}
 	if (result.session.rlmDepth === 0 && !options.telemetryDisabled) {
 		installAgentTelemetry(result.session, {
 			agentDir: options.services.agentDir,

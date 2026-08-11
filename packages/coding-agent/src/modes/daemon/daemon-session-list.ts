@@ -260,10 +260,9 @@ export function summaryForActiveSession(
 		rlmChildId: metadata.rlmChildId,
 		...(skillEnforcementResult
 			? {
-				rlmChildRegistryStatus:
-					skillEnforcementResult.status === "failed" ? "enforcement_failed" : "completed",
-				skillEnforcementResult,
-			}
+					rlmChildRegistryStatus: skillEnforcementResult.status === "failed" ? "enforcement_failed" : "completed",
+					skillEnforcementResult,
+				}
 			: {}),
 		...(metadata.kind === "subagent" && session.repliedToParentSinceTask !== undefined
 			? { repliedSinceTask: session.repliedToParentSinceTask }

@@ -2591,9 +2591,10 @@ export class AgentsViewMode implements Component, Focusable {
 		const enforcementText = enforcement
 			? `methods ${enforcement.activatedMethods.length}/${enforcement.methodCount} · applied ${enforcement.appliedMethods.length} · n/a ${enforcement.notApplicableMethods.length} · missing ${enforcement.missingMethods.length}`
 			: undefined;
-		const summaryText = !pendingDelete && !pendingKill
-			? [row.summary.summary, enforcementText].filter(Boolean).join(" · ") || undefined
-			: undefined;
+		const summaryText =
+			!pendingDelete && !pendingKill
+				? [row.summary.summary, enforcementText].filter(Boolean).join(" · ") || undefined
+				: undefined;
 		const titleContent = summaryText ? `${title} ${theme.fg("dim", `· ${summaryText}`)}` : title;
 		const titleCell = formatTableCell(titleContent, titleWidth);
 		const cells = [

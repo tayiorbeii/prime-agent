@@ -4,11 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { validateAgentTemplateDefinition } from "../src/core/extensions/agent-templates.js";
-import {
-	agentTemplateDigest,
-	resolveResourceScope,
-	restoreResourceScope,
-} from "../src/core/scoped-resource-loader.js";
+import { agentTemplateDigest, resolveResourceScope, restoreResourceScope } from "../src/core/scoped-resource-loader.js";
 import type { Skill } from "../src/core/skills.js";
 import { createSyntheticSourceInfo } from "../src/core/source-info.js";
 import { createTestExtensionsResult, createTestResourceLoader } from "./utilities.js";
@@ -89,9 +85,7 @@ describe("skill enforcement contracts", () => {
 
 	it("persists, restores, and hash-verifies the exact resolved contract", async () => {
 		const template = validateAgentTemplateDefinition(definition());
-		const extensions = await createTestExtensionsResult([
-			(pi) => pi.registerAgentTemplate(definition()),
-		]);
+		const extensions = await createTestExtensionsResult([(pi) => pi.registerAgentTemplate(definition())]);
 		const base = createTestResourceLoader({
 			extensionsResult: extensions,
 			skills: [skill("method-one"), skill("method-two")],
@@ -110,9 +104,7 @@ describe("skill enforcement contracts", () => {
 			skillSnapshots: scope.skillSnapshots.map((snapshot) => ({ ...snapshot })),
 			skillEnforcementContract: scope.skillEnforcementContract,
 		};
-		expect(restoreResourceScope(base, identity).skillEnforcementContract).toEqual(
-			scope.skillEnforcementContract,
-		);
+		expect(restoreResourceScope(base, identity).skillEnforcementContract).toEqual(scope.skillEnforcementContract);
 		const admittedBody = scope.skillEnforcementContract?.methods[0]?.body;
 		writeFileSync(identity.skillSnapshots[0]!.filePath, "# changed after admission\n");
 		const restoredAfterMutation = restoreResourceScope(base, identity).skillEnforcementContract;

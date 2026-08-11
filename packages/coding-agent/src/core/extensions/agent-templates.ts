@@ -110,9 +110,7 @@ function normalizeSkillEnforcement(
 		value.allowedDispositions[0] !== "applied" ||
 		value.allowedDispositions[1] !== "not_applicable"
 	) {
-		throw new Error(
-			'Agent template skillEnforcement.allowedDispositions must be ["applied", "not_applicable"]',
-		);
+		throw new Error('Agent template skillEnforcement.allowedDispositions must be ["applied", "not_applicable"]');
 	}
 	if (!Number.isSafeInteger(value.maxRepairTurns) || value.maxRepairTurns < 0) {
 		throw new Error("Agent template skillEnforcement.maxRepairTurns must be a non-negative safe integer");
