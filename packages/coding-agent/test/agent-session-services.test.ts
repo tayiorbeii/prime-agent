@@ -167,6 +167,73 @@ describe("createAgentSessionFromServices", () => {
 		}
 	});
 
+	it("restores an identical persisted child template scope", async () => {
+		const tempDir = join(tmpdir(), `pi-session-template-restore-${Date.now()}`);
+		mkdirSync(tempDir, { recursive: true });
+		cleanupPaths.push(tempDir);
+		const selectedSkill = {
+			name: "team-system-design",
+			description: "selected method sentinel",
+			filePath: join(tempDir, "team-system-design", "SKILL.md"),
+			baseDir: join(tempDir, "team-system-design"),
+			sourceInfo: createSyntheticSourceInfo("<test:team-system-design>", { source: "test" }),
+			disableModelInvocation: true,
+			kind: "markdown" as const,
+		};
+		const services = await createAgentSessionServices({
+			cwd: tempDir,
+			agentDir: tempDir,
+			settingsManager: SettingsManager.inMemory(),
+			resourceLoaderOptions: {
+				noPromptTemplates: true,
+				noThemes: true,
+				extensionFactories: [
+					(pi) =>
+						pi.registerAgentTemplate({
+							schema: "prime.agent-template/v1",
+							id: "prime/template/planner",
+							label: "Planner",
+							description: "Plans bounded changes.",
+							promptAppend: "RESTORED_PERSONA_SENTINEL",
+							skills: { include: [selectedSkill.name], exposeSelected: true },
+						}),
+				],
+				skillsOverride: () => ({ skills: [selectedSkill], diagnostics: [] }),
+			},
+		});
+		const template = services.resourceLoader
+			.getExtensions()
+			.runtime.agentTemplates.get("prime/template/planner")?.definition;
+		if (!template) throw new Error("template missing");
+		const scope = resolveResourceScope(services.resourceLoader, {
+			templateId: template.id,
+			promptAppend: template.promptAppend,
+			skills: template.skills,
+		});
+		const sessionManager = SessionManager.create(tempDir, join(tempDir, "sessions-template"));
+		sessionManager.newSession({ rlmDepth: 1 });
+		sessionManager.appendCustomEntry("prime.agent-template-resolution/v1", {
+			schema: "prime.agent-template-resolution/v1",
+			templateId: template.id,
+			templateSha256: agentTemplateDigest(template),
+			promptSha256: createHash("sha256").update(template.promptAppend).digest("hex"),
+			skillNames: [...(template.skills?.include ?? [])],
+			skillSnapshots: scope.skillSnapshots.map((snapshot) => ({ ...snapshot })),
+			thinkingLevel: "off",
+			activeToolNames: ["ipython"],
+			allowedToolNames: ["ipython"],
+		});
+		const { session } = await createAgentSessionFromServices({ services, sessionManager });
+		try {
+			expect(session.agent.state.systemPrompt).toContain("RESTORED_PERSONA_SENTINEL");
+			expect(session.agent.state.systemPrompt).toContain("selected method sentinel");
+			expect(session.getActiveToolNames()).toEqual(["ipython"]);
+			expect(session.thinkingLevel).toBe("off");
+		} finally {
+			session.dispose();
+		}
+	});
+
 	it("forwards daemon-backed agent message controllers into AgentSession", async () => {
 		const tempDir = join(tmpdir(), `pi-session-services-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		mkdirSync(tempDir, { recursive: true });
