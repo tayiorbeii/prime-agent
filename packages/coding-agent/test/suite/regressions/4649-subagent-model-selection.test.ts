@@ -55,6 +55,28 @@ describe("ENG-4649 subagent model selection", () => {
 		}
 	});
 
+	it("limits RLM discovery and selection to session-scoped models", async () => {
+		const harness = await createHarness({
+			provider,
+			models: [{ id: "parent-model" }, { id: "child-model" }, { id: "unscoped-model" }],
+		});
+		try {
+			harness.session.setScopedModels([
+				{ model: harness.getModel("parent-model")! },
+				{ model: harness.getModel("child-model")! },
+			]);
+			expect((await harness.session.findRlmModels("unscoped", 8)).models).toEqual([]);
+			expect((await harness.session.findRlmModels("child", 8)).models.map((model) => model.selector)).toEqual([
+				`${provider}/child-model`,
+			]);
+			await expect(
+				harness.session.runRlmChild("reject an unscoped model", { model: `${provider}/unscoped-model` }),
+			).rejects.toThrow("unavailable, unauthenticated, or expired");
+		} finally {
+			harness.cleanup();
+		}
+	});
+
 	it("omits providers whose credentials are marked expired", async () => {
 		const harness = await createHarness({ provider, models: [{ id: "parent-model" }, { id: "child-model" }] });
 		try {
@@ -90,7 +112,7 @@ describe("ENG-4649 subagent model selection", () => {
 			const discovered = await harness.session.findRlmModels("", 20);
 			expect(discovered.models.map((model) => model.selector)).toEqual([`${codexProvider}/parent-model`]);
 			expect(fetchModels).toHaveBeenCalledWith(
-				expect.stringMatching(/\/codex\/models\?client_version=/),
+				expect.stringContaining("/codex/models?client_version=1.0.0"),
 				expect.objectContaining({
 					headers: expect.objectContaining({ "chatgpt-account-id": "account-1" }),
 				}),
