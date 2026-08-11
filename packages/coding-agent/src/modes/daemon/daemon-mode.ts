@@ -101,6 +101,7 @@ import {
 import { ORPHAN_PROCESS_JOURNAL_ENV } from "../../core/orphan-process-journal.js";
 import { PromptAdmissionCancelledError, waitForPromptAdmission } from "../../core/prompt-admission.js";
 import type { CreateRlmSubagentRuntimeOptions, SubagentRuntimeHost } from "../../core/rlm-runtime.js";
+import type { SkillEnforcementResultV1 } from "../../core/skill-enforcement.js";
 import {
 	canPassivateSession,
 	type IdleEvictionMinutes,
@@ -200,6 +201,11 @@ import {
 	SESSION_LEASE_OWNER_ID_ENV,
 	SESSION_LEASES_ENABLED_ENV,
 } from "./daemon-worker-protocol.js";
+import {
+	type PersistedResourceScopeIdentity,
+	verifyPersistedSkillEnforcementContract,
+} from "../../core/scoped-resource-loader.js";
+import { verifySkillEnforcementResultAgainstLedger } from "../../core/skill-enforcement.js";
 import { MutationDrainLatch } from "./mutation-drain-latch.js";
 import { serializeSavedSessionInfo } from "./saved-session-info.js";
 import {
@@ -388,7 +394,9 @@ interface PersistedRlmSubagentRegistryEntry {
 	prompt?: string;
 	spawnCode?: string;
 	model?: { provider: string; modelId: string };
-	status: "running" | "completed" | "deleted";
+	status: "running" | "completed" | "enforcement_failed" | "deleted";
+	skillEnforcementRequired?: boolean;
+	skillEnforcementResult?: SkillEnforcementResultV1;
 	createdAt: number;
 	updatedAt: string;
 }
@@ -927,6 +935,8 @@ export class AgentDaemon {
 			spawnCode?: string;
 			model?: { provider: string; modelId: string };
 			status: PersistedRlmSubagentRegistryEntry["status"];
+			skillEnforcementRequired?: boolean;
+			skillEnforcementResult?: SkillEnforcementResultV1;
 			createdAt?: number;
 		},
 	): boolean {
@@ -946,6 +956,10 @@ export class AgentDaemon {
 			...(input.spawnCode ? { spawnCode: input.spawnCode } : {}),
 			...(input.model ? { model: input.model } : {}),
 			status: input.status,
+			...(input.skillEnforcementRequired === undefined
+				? {}
+				: { skillEnforcementRequired: input.skillEnforcementRequired }),
+			...(input.skillEnforcementResult ? { skillEnforcementResult: input.skillEnforcementResult } : {}),
 			createdAt: input.createdAt ?? Date.now(),
 			updatedAt: new Date().toISOString(),
 		});
@@ -977,6 +991,57 @@ export class AgentDaemon {
 			this.rlmSubagentRegistryPath(parentState.runtime.session),
 			throwOnReadError,
 		);
+	}
+
+	private async verifyPersistedRlmSubagentEnforcement(
+		entry: PersistedRlmSubagentRegistryEntry,
+	): Promise<PersistedRlmSubagentRegistryEntry> {
+		if (
+			entry.status === "deleted" ||
+			(entry.skillEnforcementRequired !== true &&
+				entry.skillEnforcementResult === undefined &&
+				entry.status !== "enforcement_failed")
+		) {
+			return entry;
+		}
+		try {
+			const manager = await SessionManager.openAsync(entry.sessionFile);
+			const branch = manager.getBranch();
+			const metadataEntries = branch.filter(
+				(candidate) =>
+					candidate.type === "custom" &&
+					candidate.customType === "prime.agent-template-resolution/v1",
+			);
+			if (metadataEntries.length === 0) {
+				if (entry.skillEnforcementRequired) throw new Error("missing template resolution metadata");
+				return entry;
+			}
+			if (metadataEntries.length !== 1 || metadataEntries[0]?.type !== "custom") {
+				throw new Error("duplicate template resolution metadata");
+			}
+			const identity = metadataEntries[0].data as PersistedResourceScopeIdentity;
+			const contract = verifyPersistedSkillEnforcementContract(identity);
+			if (!contract) {
+				if (entry.skillEnforcementRequired) throw new Error("missing persisted enforcement contract");
+				return entry;
+			}
+			const verified = verifySkillEnforcementResultAgainstLedger(
+				entry.skillEnforcementResult,
+				contract,
+				manager.getSessionId(),
+				branch,
+			);
+			if (!verified) throw new Error("result does not match the persisted contract and ledger");
+			const status = verified.status === "failed" ? "enforcement_failed" : "completed";
+			if (entry.status !== status) throw new Error("registry status does not match the enforcement result");
+			return { ...entry, status, skillEnforcementRequired: true, skillEnforcementResult: verified };
+		} catch (error) {
+			this.log(
+				`rejected persisted skill enforcement attestation for ${entry.childId}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			const { skillEnforcementResult: _discarded, ...rest } = entry;
+			return { ...rest, status: "enforcement_failed" };
+		}
 	}
 
 	private async readLatestRlmSubagentRegistryPath(
@@ -1013,13 +1078,19 @@ export class AgentDaemon {
 					typeof entry.sessionName !== "string" ||
 					typeof entry.sessionDir !== "string" ||
 					typeof entry.sessionFile !== "string" ||
-					(entry.status !== "running" && entry.status !== "completed" && entry.status !== "deleted") ||
+					(entry.status !== "running" &&
+						entry.status !== "completed" &&
+						entry.status !== "enforcement_failed" &&
+						entry.status !== "deleted") ||
+					(entry.skillEnforcementRequired !== undefined &&
+						typeof entry.skillEnforcementRequired !== "boolean") ||
 					(entry.rlmDepth !== undefined && (!Number.isSafeInteger(entry.rlmDepth) || entry.rlmDepth < 0)) ||
 					(entry.rlmMaxDepth !== undefined && (!Number.isSafeInteger(entry.rlmMaxDepth) || entry.rlmMaxDepth < 0))
 				) {
 					continue;
 				}
-				latest.set(entry.childId, entry as PersistedRlmSubagentRegistryEntry);
+				const parsed = entry as PersistedRlmSubagentRegistryEntry;
+				latest.set(entry.childId, await this.verifyPersistedRlmSubagentEnforcement(parsed));
 			} catch (error) {
 				this.log(
 					`ignored malformed RLM subagent registry entry: ${error instanceof Error ? error.message : String(error)}`,
@@ -1166,6 +1237,10 @@ export class AgentDaemon {
 					passive.rootInfo?.path,
 				rlmDepth: passive.entry.rlmDepth ?? passive.info.rlmDepth,
 				rlmChildId: passive.entry.childId,
+				rlmChildRegistryStatus: passive.entry.status,
+				...(passive.entry.skillEnforcementResult
+					? { skillEnforcementResult: passive.entry.skillEnforcementResult }
+					: {}),
 				rlmParentNodeId: passive.entry.rlmParentNodeId ?? passive.entry.childId,
 				spawnCode: passive.entry.spawnCode,
 			};
@@ -2222,6 +2297,10 @@ export class AgentDaemon {
 				if (state.runtime.metadata.rehydratedCompleted) return true;
 				const metadata = state.runtime.metadata;
 				const model = session.model;
+				const skillEnforcementResult = session.getSkillEnforcementResult?.();
+				const skillEnforcementRequired =
+					session.getSkillEnforcementStatus?.().required ?? skillEnforcementResult !== undefined;
+				if (skillEnforcementRequired) session.sessionManager.flushNow();
 				return this.recordRlmSubagentRegistryEntry(parentState, {
 					childId,
 					sessionName: session.sessionName ?? childId,
@@ -2233,7 +2312,9 @@ export class AgentDaemon {
 					prompt: metadata.prompt && metadata.prompt.length <= 4096 ? metadata.prompt : undefined,
 					spawnCode: metadata.spawnCode,
 					...(model ? { model: { provider: model.provider, modelId: model.id } } : {}),
-					status: "completed",
+					status: skillEnforcementResult?.status === "failed" ? "enforcement_failed" : "completed",
+					skillEnforcementRequired,
+					...(skillEnforcementResult ? { skillEnforcementResult } : {}),
 					createdAt: metadata.createdAt,
 				});
 			},
@@ -2309,6 +2390,9 @@ export class AgentDaemon {
 			parentSession: options.parentSession.sessionFile,
 			rlmDepth: options.rlmDepth,
 		});
+		if (options.templateMetadata) {
+			sessionManager.appendCustomEntry("prime.agent-template-resolution/v1", options.templateMetadata);
+		}
 		let stateRef: ActiveSessionState | undefined;
 		// Subagents inherit the parent's client env (e.g. herdr pane identity).
 		const runtime = await withClientEnv(parentState.clientEnv, () =>
@@ -2326,6 +2410,7 @@ export class AgentDaemon {
 					initialActiveToolNames: options.activeToolNames,
 					allowedToolNames: options.allowedToolNames,
 					customTools: options.customTools,
+					resourceScope: options.resourceScope,
 					includeGoals: options.includeGoals,
 					includeCompactSkill: options.includeCompactSkill,
 					agentMessageController: this.createAgentMessageController(() => stateRef),
@@ -4887,6 +4972,7 @@ export class AgentDaemon {
 	private createAgentMessageAgentSummary(state: ActiveSessionState): AgentSessionMessageAgentSummary {
 		const metadata = state.runtime.metadata;
 		const session = state.runtime.session;
+		const skillEnforcementResult = session.getSkillEnforcementResult?.();
 		return {
 			...this.createAgentSessionMessageEndpoint(state),
 			cwd: state.runtime.cwd,
@@ -4908,6 +4994,13 @@ export class AgentDaemon {
 				isStreaming: session.isStreaming,
 			} as SessionSummary),
 			...(metadata.rlmChildId ? { rlmChildId: metadata.rlmChildId } : {}),
+			...(skillEnforcementResult
+				? {
+					rlmChildRegistryStatus:
+						skillEnforcementResult.status === "failed" ? "enforcement_failed" : "completed",
+					skillEnforcementResult,
+				}
+				: {}),
 			...(metadata.sessionDir ? { sessionDir: metadata.sessionDir } : {}),
 			...(session.sessionFile ? { sessionPath: session.sessionFile } : {}),
 		};

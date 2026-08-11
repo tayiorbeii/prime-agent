@@ -345,6 +345,14 @@ examples rather than sidecar defaults:
 }
 ```
 
+For HTTP entries, the resolved `mcp.config` includes `type: "http"`, the
+configured `bearerTokenEnvVar` when present, and an `allowStoredAuth` attestation.
+Stored `auth.json` credentials may be read only when that flag is true. Official
+catalog endpoints are attested; user-declared catalog-name URL overrides are
+never attested, preventing an official credential from reaching an override.
+User-declared noncatalog OAuth entries are attested for their own registered
+provider, while bearer-only entries use only their named environment variable.
+
 The Python adapters open an HTTP session only for an HTTP configuration; they
 do not launch or attach to stdio themselves. Context Mode exposes a deliberate
 allowlist for execution, file processing, batch processing, fetch-and-index,
@@ -370,7 +378,53 @@ automatically installs, upgrades, reindexes, removes, or purges a sidecar.
 - **Multi-session daemon.** OAuth provider registration is process-global; a
   user-declared server unique to one daemon session is re-registered on that
   session's next reload.
+- **Direct HTTP boundaries.** A host configuration error fails closed; only a
+  successful unconfigured response permits a class or documented environment
+  fallback. Direct endpoints require HTTPS except on loopback, reject embedded URL
+  credentials, and never carry host headers or stored auth to an environment
+  fallback. Connect, initialize, discovery, and call phases each have a bounded
+  deadline with cancellation cleanup and no automatic tool-call retry. Arguments
+  must be strict JSON and are capped at 8 MiB; decoded tool results and discovery
+  metadata are capped at the same size before caching or model exposure. Direct
+  HTTP also requires an MCP SDK transport that accepts a bounded `http_client`:
+  response `Content-Length` and cumulative streamed bytes are capped at 9 MiB,
+  compression is disabled/rejected, and legacy headers-only transports fail
+  closed. The configured HTTPS endpoint remains a trusted resource boundary.
 - **Stdio lifecycle.** Local sidecars are owned by the session's host manager,
   started on first use, serialized per server, and stopped on reload/disposal.
+- **Framing and diagnostics limits.** The host accepts newline-delimited JSON-RPC
+  only. It bounds an incomplete stdout frame and each inbound JSON-RPC message
+  to 8 MiB by default. Tool arguments are capped at 8 MiB, while the outbound
+  host-bridge/JSON-RPC request cap is 9 MiB so the full argument allowance remains
+  usable after adding method, server, tool, deadline, and JSON-RPC envelope fields.
+  Exceeding a limit or emitting
+  malformed/protocol-corrupt output taints and terminates the process; the stream
+  is never reused. Host embedders may lower these positive-integer limits.
+  Stderr is not streamed, logged, or interpolated into errors. The host retains
+  at most 8 KiB only to report bounded metadata (`captured ... and suppressed` or
+  `truncated and suppressed`); raw sidecar content is always omitted because
+  heuristic redaction cannot guarantee that novel or unlabeled secrets are safe.
+  Arbitrary child-process error messages are likewise suppressed; only an
+  allowlisted Node error code may accompany the server and lifecycle phase.
+- **Deadlines and cancellation.** Host-bridge `list_tools` and `call_tool`
+  requests can carry an absolute `deadlineEpochMs`. Because operations are
+  serialized, the host checks it inside the queue immediately before every
+  dispatch (including a safe retry); an operation that expired while waiting is
+  rejected without reaching the sidecar. After dispatch, the response timer is
+  capped to the remaining absolute deadline so the call cannot occupy the queue
+  beyond it; expiry taints and terminates the sidecar. Deadline expiry after a
+  mutating request was written cannot undo its effects, and possibly delivered
+  tool calls are never retried. Kernel communication cancellation without an
+  earlier absolute deadline cannot retroactively provide this bound.
+- **Integration trust.** These transport limits are defense in depth, not a
+  sandbox. A configured executable runs with the host user's filesystem/network
+  access and receives its configured environment; a configured HTTP endpoint can
+  consume request data and transport resources. Configure only integrations you
+  trust, use least-privilege credentials, and restrict tool surfaces.
+
+Successful `mcp.config` responses include a numeric `generation`. It advances
+when settings refresh, explicit/automatic restart, transport taint/timeout, or
+unexpected process exit crosses a lifecycle boundary, allowing clients to
+invalidate cached discovery identity before an implicit replacement is used.
 
 See also: [Skills](skills.md), [Settings](settings.md).

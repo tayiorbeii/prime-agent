@@ -2,12 +2,15 @@
 
 ## [Unreleased]
 
+- Added deterministic child-template method enforcement with snapshot-verified `skill_usage` activation, append-only dispositions, bounded completion repair, hash-bound attestations, daemon/resume persistence, and parent-visible inspection counts. Enforcement remains opt-in for ordinary v1 templates and fail-closed for declaring packages.
 - Added trusted extension Agent Templates for child-only RLM personas with immutable exact skill scopes, parent-bounded tool policies, and hash-verified resume compatibility.
 - Added host-managed local stdio MCP servers with serialized calls, restart handling, and cleanup on reload or session disposal.
 - Added bounded IPython output artifacts with opaque retrieval handles for oversized stdout, stderr, results, and tracebacks.
 - Added bundled `jcodemunch` and `context-mode` Python skills enabled by default through lazy host-managed stdio defaults, with HTTP overrides, curated tool surfaces, and graceful unavailable diagnostics.
 - Added privacy-safe pseudonymous product analytics for onboarding, command use, execution modes, run outcomes, TTFT, latency, usage, tools, retries, and compactions, with disclosure and opt-out controls ([ENG-4682](https://linear.app/primeintellect/issue/ENG-4682/add-privacy-safe-posthog-analytics-to-prime-agent)).
 - Fixed host-managed stdio MCP sidecars crashing on closed stdin, retrying possibly delivered tool calls, accepting invalid handshakes/settings, or returning before process cleanup completed.
+- Hardened MCP policy and transport boundaries with fail-closed host configuration, generation-bound discovery, HTTPS/credential-source checks, bounded direct and stdio payloads, queued dispatch deadlines, protocol tainting, and redacted diagnostics.
+- Fixed Agent Templates activating every allowed tool instead of the explicit active subset, and expanded retained-child skill identity from `SKILL.md` alone to deterministic bounded package-content snapshots.
 - Fixed Python host bridge requests waiting forever or leaking comms after timeouts and cancellation, and corrected the bundled Context Mode file-processing example.
 - Fixed bounded IPython artifacts using unbounded append/search memory, rescanning from byte zero, leaking failed captures, publishing partial artifacts, or splitting Unicode boundaries.
 - Fixed strict context routing bypasses around fallback guards, descriptor redirects, unbounded pipeline tails, and mixed Python reads while allowing scalar reductions.

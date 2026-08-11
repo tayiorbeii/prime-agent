@@ -4,6 +4,7 @@ import type { AgentSession } from "./agent-session.js";
 import type { ToolDefinition } from "./extensions/index.js";
 import type { HostRequestHandler } from "./kernel/index.js";
 import type { PersistedResourceScopeIdentity, ResolvedResourceScope } from "./scoped-resource-loader.js";
+import type { SkillEnforcementResultV1 } from "./skill-enforcement.js";
 
 export interface RlmRunRequest {
 	prompt: string;
@@ -19,7 +20,7 @@ export interface RlmSpawnHandle {
 	model: string;
 }
 
-export type RlmSubagentRegistryStatus = "running" | "completed" | "error";
+export type RlmSubagentRegistryStatus = "running" | "completed" | "enforcement_failed" | "error";
 
 export interface RlmSubagentRegistryEntry {
 	rlm_child_id: string;
@@ -28,6 +29,7 @@ export interface RlmSubagentRegistryEntry {
 	session_name: string;
 	session_dir: string;
 	status: RlmSubagentRegistryStatus;
+	skill_enforcement_result?: SkillEnforcementResultV1;
 }
 
 export interface RlmListSubagentsResult {

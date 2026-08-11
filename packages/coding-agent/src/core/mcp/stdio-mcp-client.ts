@@ -3,6 +3,15 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 const DEFAULT_STARTUP_TIMEOUT_MS = 10_000;
 const DEFAULT_CALL_TIMEOUT_MS = 30_000;
 const STOP_TIMEOUT_MS = 1_000;
+const FATAL_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+
+/** Conservative transport limits; callers may lower them for constrained integrations. */
+export const DEFAULT_MAX_STDOUT_BUFFER_BYTES = 8_388_608;
+export const DEFAULT_MAX_JSON_RPC_MESSAGE_BYTES = 8_388_608;
+export const DEFAULT_MAX_TOOL_ARGUMENT_BYTES = 8_388_608;
+// Reserve one MiB for JSON-RPC/bridge envelope fields around an 8 MiB argument object.
+export const DEFAULT_MAX_JSON_RPC_REQUEST_BYTES = 9_437_184;
+export const DEFAULT_STDERR_TAIL_BYTES = 8_192;
 
 export const SUPPORTED_PROTOCOL_VERSIONS = ["2024-11-05", "2025-03-26", "2025-06-18"] as const;
 
@@ -14,6 +23,12 @@ export interface StdioMcpClientOptions {
 	env: Record<string, string | undefined>;
 	startupTimeoutMs?: number;
 	callTimeoutMs?: number;
+	maxStdoutBufferBytes?: number;
+	maxMessageBytes?: number;
+	maxRequestBytes?: number;
+	stderrTailBytes?: number;
+	/** Called once when the current process/stream identity becomes unusable. */
+	onLifecycleInvalidated?: () => void;
 }
 
 export interface StdioMcpTool {
@@ -78,28 +93,43 @@ export class StdioMcpClient {
 	private toolsSupported = false;
 	private disposed = false;
 	private tainted = false;
+	private lifecycleInvalidated = false;
 	private taintError?: StdioMcpTransportError;
 	private stopping?: Promise<void>;
 	private nextRequestId = 1;
-	private inputBuffer = "";
+	private inputBuffer = Buffer.alloc(0);
+	private inputBufferLength = 0;
+	private stderrTail = "";
+	private stderrTruncated = false;
 	private readonly pending = new Map<number, PendingRequest>();
 
-	constructor(private readonly options: StdioMcpClientOptions) {}
+	constructor(private readonly options: StdioMcpClientOptions) {
+		for (const [name, value] of Object.entries({
+			maxStdoutBufferBytes: options.maxStdoutBufferBytes,
+			maxMessageBytes: options.maxMessageBytes,
+			maxRequestBytes: options.maxRequestBytes,
+			stderrTailBytes: options.stderrTailBytes,
+		})) {
+			if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) {
+				throw new TypeError(`${name} must be a positive safe integer`);
+			}
+		}
+	}
 
-	async listTools(): Promise<StdioMcpTool[]> {
+	async listTools(deadlineEpochMs?: number): Promise<StdioMcpTool[]> {
 		await this.start();
 		this.ensureToolsSupported();
-		const result = await this.request("tools/list", {}, this.callTimeoutMs);
+		const result = await this.request("tools/list", {}, this.callTimeoutMs, deadlineEpochMs);
 		if (!isRecord(result) || !Array.isArray(result.tools)) {
-			throw new StdioMcpProtocolError(`MCP server ${this.options.server} returned invalid tools`);
+			throw this.protocolCorruption(`MCP server ${this.options.server} returned invalid tools/list result`);
 		}
 		return result.tools.filter((tool): tool is StdioMcpTool => isRecord(tool) && typeof tool.name === "string");
 	}
 
-	async callTool(tool: string, arguments_: Record<string, unknown>): Promise<unknown> {
+	async callTool(tool: string, arguments_: Record<string, unknown>, deadlineEpochMs?: number): Promise<unknown> {
 		await this.start();
 		this.ensureToolsSupported();
-		return this.request("tools/call", { name: tool, arguments: arguments_ }, this.callTimeoutMs);
+		return this.request("tools/call", { name: tool, arguments: arguments_ }, this.callTimeoutMs, deadlineEpochMs);
 	}
 
 	async health(): Promise<void> {
@@ -115,6 +145,7 @@ export class StdioMcpClient {
 			if (this.tainted) {
 				await this.waitForTaintCleanup(true);
 			} else {
+				this.invalidateLifecycle();
 				this.tainted = true;
 				await this.stop();
 			}
@@ -150,6 +181,22 @@ export class StdioMcpClient {
 		return this.options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
 	}
 
+	private get maxStdoutBufferBytes(): number {
+		return this.options.maxStdoutBufferBytes ?? DEFAULT_MAX_STDOUT_BUFFER_BYTES;
+	}
+
+	private get maxMessageBytes(): number {
+		return this.options.maxMessageBytes ?? DEFAULT_MAX_JSON_RPC_MESSAGE_BYTES;
+	}
+
+	private get maxRequestBytes(): number {
+		return this.options.maxRequestBytes ?? DEFAULT_MAX_JSON_RPC_REQUEST_BYTES;
+	}
+
+	private get stderrTailBytes(): number {
+		return this.options.stderrTailBytes ?? DEFAULT_STDERR_TAIL_BYTES;
+	}
+
 	private async start(): Promise<void> {
 		if (this.disposed) {
 			throw new StdioMcpTransportError(`MCP server ${this.options.server} is disposed`);
@@ -183,12 +230,15 @@ export class StdioMcpClient {
 		this.child = child;
 		this.initialized = false;
 		this.toolsSupported = false;
-		this.inputBuffer = "";
-		child.stdout.setEncoding("utf8");
+		this.inputBuffer = Buffer.alloc(0);
+		this.inputBufferLength = 0;
+		this.stderrTail = "";
+		this.stderrTruncated = false;
 		child.stderr.setEncoding("utf8");
-		child.stdout.on("data", (chunk: string) => this.handleStdout(chunk));
-		// Keep stderr private. MCP servers often print credentials or request payloads.
-		child.stderr.on("data", () => undefined);
+		child.stdout.on("data", (chunk: Buffer) => this.handleStdout(chunk));
+		// Stderr is untrusted and may contain credentials. Keep only a small,
+		// redacted tail for bounded startup/exit diagnostics.
+		child.stderr.on("data", (chunk: string) => this.handleStderr(chunk));
 		child.on("error", (error) => this.handleChildFailure(child, error));
 		child.stdin.on("error", (error) => this.handleChildFailure(child, error));
 		child.on("exit", () => this.handleChildFailure(child, new Error("process exited")));
@@ -224,39 +274,100 @@ export class StdioMcpClient {
 			this.toolsSupported = isRecord(initializeResult.capabilities.tools);
 			this.sendNotification("notifications/initialized", {});
 			this.initialized = true;
+			// A successfully initialized process establishes a new usable identity.
+			this.lifecycleInvalidated = false;
 			if (this.disposed)
 				throw new StdioMcpTransportError(`MCP server ${this.options.server} was disposed during startup`);
 		} catch (error) {
 			await this.stop();
 			if (error instanceof StdioMcpTransportError || error instanceof StdioMcpProtocolError) throw error;
-			throw new StdioMcpTransportError(`MCP server ${this.options.server} failed to start`);
+			throw new StdioMcpTransportError(`MCP server ${this.options.server} failed to start${this.exitDiagnostic()}`);
 		}
 	}
 
-	private request(method: string, params: Record<string, unknown>, timeoutMs: number): Promise<unknown> {
+	private request(
+		method: string,
+		params: Record<string, unknown>,
+		timeoutMs: number,
+		deadlineEpochMs?: number,
+	): Promise<unknown> {
 		const child = this.child;
 		if (!child || child.stdin.destroyed) {
 			return Promise.reject(new StdioMcpRequestNotSentError(`MCP server ${this.options.server} is not running`));
 		}
 		const id = this.nextRequestId++;
 		return new Promise<unknown>((resolve, reject) => {
+			const deadlineRemainingMs =
+				deadlineEpochMs === undefined ? timeoutMs : Math.max(1, deadlineEpochMs - Date.now());
+			const effectiveTimeoutMs = Math.min(timeoutMs, deadlineRemainingMs);
 			const timer = globalThis.setTimeout(() => {
 				this.pending.delete(id);
 				this.taintAndStop();
 				reject(new StdioMcpTransportError(`MCP server ${this.options.server} timed out during ${method}`));
-			}, timeoutMs);
+			}, effectiveTimeoutMs);
 			this.pending.set(id, { resolve, reject, timer });
-			const request = `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`;
+			let request: string;
+			try {
+				request = `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`;
+			} catch {
+				globalThis.clearTimeout(timer);
+				this.pending.delete(id);
+				reject(
+					new StdioMcpProtocolError(
+						`MCP server ${this.options.server} ${method} request is not JSON-serializable`,
+					),
+				);
+				return;
+			}
+			const requestBytes = Buffer.byteLength(request, "utf8");
+			if (requestBytes > this.maxRequestBytes) {
+				globalThis.clearTimeout(timer);
+				this.pending.delete(id);
+				reject(
+					new StdioMcpProtocolError(
+						`MCP server ${this.options.server} ${method} request is ${requestBytes} bytes; limit is ${this.maxRequestBytes}`,
+					),
+				);
+				return;
+			}
 			const rejectRequestNotSent = (error?: Error): void => {
 				if (!this.pending.has(id)) return;
 				globalThis.clearTimeout(timer);
 				this.pending.delete(id);
-				const detail = error?.message ? `: ${error.message}` : "";
-				reject(new StdioMcpRequestNotSentError(`MCP server ${this.options.server} request failed${detail}`));
+				const code = error ? this.safeErrorCode(error) : "";
+				reject(
+					new StdioMcpRequestNotSentError(`MCP server ${this.options.server} request failed before write${code}`),
+				);
 			};
+			const rejectAmbiguousWrite = (error: Error): void => {
+				if (!this.pending.has(id)) return;
+				globalThis.clearTimeout(timer);
+				this.pending.delete(id);
+				reject(
+					new StdioMcpTransportError(
+						`MCP server ${this.options.server} ${method} write completion failed${this.safeErrorCode(error)}`,
+					),
+				);
+				this.taintAndStop();
+			};
+			// Startup/initialize may have consumed the caller's remaining time after
+			// it left the manager queue. Recheck at the final write boundary so a
+			// mutating tools/call cannot escape its propagated deadline.
+			if (deadlineEpochMs !== undefined && Date.now() >= deadlineEpochMs) {
+				globalThis.clearTimeout(timer);
+				this.pending.delete(id);
+				reject(
+					new StdioMcpProtocolError(
+						`MCP server ${this.options.server} deadline expired before ${method} request write`,
+					),
+				);
+				return;
+			}
 			try {
 				child.stdin.write(request, "utf8", (error?: Error | null) => {
-					if (error) rejectRequestNotSent(error);
+					// A completion callback error can arrive after bytes were accepted by
+					// the pipe, so delivery is ambiguous and mutating calls must not retry.
+					if (error) rejectAmbiguousWrite(error);
 				});
 			} catch (error) {
 				rejectRequestNotSent(error instanceof Error ? error : undefined);
@@ -276,59 +387,164 @@ export class StdioMcpClient {
 		}
 	}
 
-	private handleStdout(chunk: string): void {
-		this.inputBuffer += chunk;
-		while (true) {
-			const newline = this.inputBuffer.indexOf("\n");
-			if (newline < 0) return;
-			const line = this.inputBuffer.slice(0, newline).trim();
-			this.inputBuffer = this.inputBuffer.slice(newline + 1);
+	private appendInput(segment: Buffer, limit: number): void {
+		const required = this.inputBufferLength + segment.length;
+		if (required > this.inputBuffer.length) {
+			let capacity = Math.min(limit, Math.max(64, this.inputBuffer.length || 64));
+			while (capacity < required) capacity = Math.min(limit, capacity * 2);
+			const grown = Buffer.allocUnsafe(capacity);
+			this.inputBuffer.copy(grown, 0, 0, this.inputBufferLength);
+			this.inputBuffer = grown;
+		}
+		segment.copy(this.inputBuffer, this.inputBufferLength);
+		this.inputBufferLength = required;
+	}
+
+	private handleStdout(chunk: Buffer): void {
+		if (this.tainted) return;
+		let chunkOffset = 0;
+		while (chunkOffset < chunk.length) {
+			const newline = chunk.indexOf(0x0a, chunkOffset);
+			if (newline < 0) {
+				const segment = chunk.subarray(chunkOffset);
+				if (this.inputBufferLength + segment.length > this.maxStdoutBufferBytes) {
+					this.protocolCorruption(
+						`MCP server ${this.options.server} stdout frame exceeded ${this.maxStdoutBufferBytes} bytes without a newline`,
+					);
+					return;
+				}
+				this.appendInput(segment, this.maxStdoutBufferBytes);
+				return;
+			}
+
+			const segment = chunk.subarray(chunkOffset, newline);
+			const messageBytes = this.inputBufferLength + segment.length;
+			if (messageBytes > this.maxMessageBytes) {
+				this.protocolCorruption(
+					`MCP server ${this.options.server} JSON-RPC message is ${messageBytes} bytes; limit is ${this.maxMessageBytes}`,
+				);
+				return;
+			}
+			this.appendInput(segment, this.maxMessageBytes);
+			let line: string;
+			try {
+				line = FATAL_UTF8_DECODER.decode(this.inputBuffer.subarray(0, this.inputBufferLength)).trim();
+			} catch {
+				this.protocolCorruption(`MCP server ${this.options.server} returned invalid UTF-8 JSON-RPC output`);
+				return;
+			}
+			this.inputBufferLength = 0;
+			chunkOffset = newline + 1;
 			if (!line) continue;
 			let message: unknown;
 			try {
 				message = JSON.parse(line);
 			} catch {
-				this.failPending(new StdioMcpProtocolError(`MCP server ${this.options.server} returned invalid JSON`));
+				this.protocolCorruption(`MCP server ${this.options.server} returned malformed JSON-RPC output`);
+				return;
+			}
+			if (!isRecord(message)) {
+				this.protocolCorruption(`MCP server ${this.options.server} returned a non-object JSON-RPC message`);
+				return;
+			}
+			const hasId = Object.hasOwn(message, "id");
+			const hasMethod = Object.hasOwn(message, "method");
+			const hasResult = Object.hasOwn(message, "result");
+			const hasError = Object.hasOwn(message, "error");
+			if (message.jsonrpc !== "2.0") {
+				this.protocolCorruption(`MCP server ${this.options.server} returned an invalid JSON-RPC version`);
+				return;
+			}
+			if (hasMethod) {
+				const validId = !hasId || typeof message.id === "number" || typeof message.id === "string";
+				const validParams =
+					!Object.hasOwn(message, "params") || isRecord(message.params) || Array.isArray(message.params);
+				if (typeof message.method !== "string" || !validId || !validParams || hasResult || hasError) {
+					this.protocolCorruption(`MCP server ${this.options.server} returned an invalid JSON-RPC request`);
+					return;
+				}
 				continue;
 			}
-			if (!isRecord(message)) continue;
+			const validResponseId =
+				hasId && (message.id === null || typeof message.id === "number" || typeof message.id === "string");
+			const validError =
+				!hasError ||
+				(isRecord(message.error) &&
+					typeof message.error.code === "number" &&
+					typeof message.error.message === "string");
+			if (!validResponseId || hasResult === hasError || !validError) {
+				this.protocolCorruption(`MCP server ${this.options.server} returned an invalid JSON-RPC response`);
+				return;
+			}
 			const id = message.id;
 			if (typeof id !== "number") continue;
 			const pending = this.pending.get(id);
 			if (!pending) continue;
 			this.pending.delete(id);
 			globalThis.clearTimeout(pending.timer);
-			const hasResult = Object.hasOwn(message, "result");
-			const hasError = Object.hasOwn(message, "error");
-			if (message.jsonrpc !== "2.0" || hasResult === hasError) {
-				pending.reject(new StdioMcpProtocolError(`MCP server ${this.options.server} returned an invalid response`));
-			} else if (hasError) {
-				if (!isRecord(message.error)) {
-					pending.reject(new StdioMcpProtocolError(`MCP server ${this.options.server} returned an invalid error`));
-				} else {
-					pending.reject(
-						new StdioMcpProtocolError(
-							`MCP server ${this.options.server} rejected ${String(message.error.code ?? "request")}`,
-						),
-					);
-				}
+			if (hasError) {
+				pending.reject(
+					new StdioMcpProtocolError(
+						`MCP server ${this.options.server} rejected ${String((message.error as Record<string, unknown>).code ?? "request")}`,
+					),
+				);
 			} else {
 				pending.resolve(message.result);
 			}
 		}
 	}
 
-	private handleChildFailure(child: ChildProcessWithoutNullStreams, _error: Error): void {
+	private handleStderr(chunk: string): void {
+		const bytes = Buffer.from(`${this.stderrTail}${chunk}`, "utf8");
+		if (bytes.length > this.stderrTailBytes) this.stderrTruncated = true;
+		this.stderrTail =
+			bytes.length <= this.stderrTailBytes
+				? bytes.toString("utf8")
+				: bytes
+						.subarray(bytes.length - this.stderrTailBytes)
+						.toString("utf8")
+						.replace(/^\uFFFD+/, "");
+	}
+
+	private safeErrorCode(error: Error): string {
+		const code = (error as NodeJS.ErrnoException).code;
+		return typeof code === "string" && /^[A-Z0-9_]{1,32}$/.test(code) ? ` (${code})` : "";
+	}
+
+	private exitDiagnostic(): string {
+		if (this.stderrTruncated) return "; stderr truncated and suppressed";
+		const bytes = Buffer.byteLength(this.stderrTail, "utf8");
+		return bytes > 0 ? `; stderr captured (${bytes} bytes) and suppressed` : "";
+	}
+
+	private protocolCorruption(message: string): StdioMcpProtocolError {
+		this.inputBuffer = Buffer.alloc(0);
+		this.inputBufferLength = 0;
+		const error = new StdioMcpProtocolError(message);
+		this.failPending(error);
+		this.taintAndStop();
+		return error;
+	}
+
+	private handleChildFailure(child: ChildProcessWithoutNullStreams, error: Error): void {
 		if (this.child !== child) return;
 		if (child.exitCode !== null || child.signalCode !== null) {
+			if (!this.tainted && !this.disposed && !this.stopping) this.invalidateLifecycle();
 			this.child = undefined;
 			this.initialized = false;
 			this.toolsSupported = false;
 			this.tainted = true;
 			this.taintError = undefined;
-			this.failPending(new StdioMcpTransportError(`MCP server ${this.options.server} stopped`));
+			this.failPending(
+				new StdioMcpTransportError(`MCP server ${this.options.server} stopped${this.exitDiagnostic()}`),
+			);
 			return;
 		}
+		this.failPending(
+			new StdioMcpTransportError(
+				`MCP server ${this.options.server} transport failed${this.safeErrorCode(error)}${this.exitDiagnostic()}`,
+			),
+		);
 		this.taintAndStop();
 	}
 
@@ -350,11 +566,18 @@ export class StdioMcpClient {
 
 	private toTransportError(error: unknown): StdioMcpTransportError {
 		if (error instanceof StdioMcpTransportError) return error;
-		const detail = error instanceof Error && error.message ? `: ${error.message}` : "";
-		return new StdioMcpTransportError(`MCP server ${this.options.server} cleanup failed${detail}`);
+		const code = error instanceof Error ? this.safeErrorCode(error) : "";
+		return new StdioMcpTransportError(`MCP server ${this.options.server} cleanup failed${code}`);
+	}
+
+	private invalidateLifecycle(): void {
+		if (this.lifecycleInvalidated) return;
+		this.lifecycleInvalidated = true;
+		this.options.onLifecycleInvalidated?.();
 	}
 
 	private taintAndStop(): void {
+		this.invalidateLifecycle();
 		this.tainted = true;
 		const stopping = this.stop();
 		void stopping.then(

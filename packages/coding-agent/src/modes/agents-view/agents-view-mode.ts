@@ -2587,7 +2587,13 @@ export class AgentsViewMode implements Component, Focusable {
 		// Append the background summary as a dim suffix on the same line, e.g.
 		// "fix auth · Refactoring token validation". Hidden during delete/stop
 		// confirmations so the warning text stands alone.
-		const summaryText = !pendingDelete && !pendingKill ? row.summary.summary : undefined;
+		const enforcement = !pendingDelete && !pendingKill ? row.summary.skillEnforcementResult : undefined;
+		const enforcementText = enforcement
+			? `methods ${enforcement.activatedMethods.length}/${enforcement.methodCount} · applied ${enforcement.appliedMethods.length} · n/a ${enforcement.notApplicableMethods.length} · missing ${enforcement.missingMethods.length}`
+			: undefined;
+		const summaryText = !pendingDelete && !pendingKill
+			? [row.summary.summary, enforcementText].filter(Boolean).join(" · ") || undefined
+			: undefined;
 		const titleContent = summaryText ? `${title} ${theme.fg("dim", `· ${summaryText}`)}` : title;
 		const titleCell = formatTableCell(titleContent, titleWidth);
 		const cells = [

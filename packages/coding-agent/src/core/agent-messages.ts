@@ -3,6 +3,7 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { HostRequestHandler } from "./kernel/index.js";
 import type { CustomMessage } from "./messages.js";
 import { canonicalSessionPath } from "./session-lease.js";
+import type { SkillEnforcementResultV1 } from "./skill-enforcement.js";
 
 export const AGENT_MESSAGE_CUSTOM_TYPE = "agent_message";
 export const AGENT_MESSAGE_SKILL_NAME = "agent-message";
@@ -65,7 +66,8 @@ export interface AgentSessionMessageAgentSummary extends AgentSessionMessageEndp
 	parentSessionPath?: string;
 	rlmDepth?: number;
 	status?: AgentFamilyStatus;
-	rlmChildRegistryStatus?: "running" | "completed" | "deleted";
+	rlmChildRegistryStatus?: "running" | "completed" | "enforcement_failed" | "deleted";
+	skillEnforcementResult?: SkillEnforcementResultV1;
 }
 
 export interface AgentSessionMessageListResult {

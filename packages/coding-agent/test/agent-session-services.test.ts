@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { registerFauxProvider } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AGENT_MESSAGE_SKILL_NAME, type AgentSessionMessageController } from "../src/core/agent-messages.js";
 import { AGENT_OBSERVE_SKILL_NAME, type AgentObserveController } from "../src/core/agent-observe.js";
@@ -18,7 +19,6 @@ describe("createAgentSessionFromServices", () => {
 	const unregisters: Array<() => void> = [];
 
 	afterEach(() => {
-		vi.unstubAllEnvs();
 		while (unregisters.length > 0) {
 			unregisters.pop()?.();
 		}
@@ -30,68 +30,6 @@ describe("createAgentSessionFromServices", () => {
 		}
 	});
 
-	it("restores an identical persisted child template scope", async () => {
-		const tempDir = join(tmpdir(), `pi-session-template-restore-${Date.now()}`);
-		mkdirSync(tempDir, { recursive: true });
-		cleanupPaths.push(tempDir);
-		const selectedSkill = {
-			name: "team-system-design",
-			description: "selected method sentinel",
-			filePath: join(tempDir, "team-system-design", "SKILL.md"),
-			baseDir: join(tempDir, "team-system-design"),
-			sourceInfo: createSyntheticSourceInfo("<test:team-system-design>", { source: "test" }),
-			disableModelInvocation: true,
-			kind: "markdown" as const,
-		};
-		const services = await createAgentSessionServices({
-			cwd: tempDir,
-			agentDir: tempDir,
-			settingsManager: SettingsManager.inMemory(),
-			resourceLoaderOptions: {
-				noPromptTemplates: true,
-				noThemes: true,
-				extensionFactories: [
-					(pi) =>
-						pi.registerAgentTemplate({
-							schema: "prime.agent-template/v1",
-							id: "prime/template/planner",
-							label: "Planner",
-							description: "Plans bounded changes.",
-							promptAppend: "RESTORED_PERSONA_SENTINEL",
-							skills: { include: [selectedSkill.name], exposeSelected: true },
-						}),
-				],
-				skillsOverride: () => ({ skills: [selectedSkill], diagnostics: [] }),
-			},
-		});
-		const template = services.resourceLoader
-			.getExtensions()
-			.runtime.agentTemplates.get("prime/template/planner")?.definition;
-		if (!template) throw new Error("template missing");
-		const scope = resolveResourceScope(services.resourceLoader, {
-			templateId: template.id,
-			promptAppend: template.promptAppend,
-			skills: template.skills,
-		});
-		const sessionManager = SessionManager.create(tempDir, join(tempDir, "sessions-template"));
-		sessionManager.newSession({ rlmDepth: 1 });
-		sessionManager.appendCustomEntry("prime.agent-template-resolution/v1", {
-			schema: "prime.agent-template-resolution/v1",
-			templateId: template.id,
-			templateSha256: agentTemplateDigest(template),
-			promptSha256: createHash("sha256").update(template.promptAppend).digest("hex"),
-			skillNames: [...(template.skills?.include ?? [])],
-			skillSnapshots: scope.skillSnapshots.map((snapshot) => ({ ...snapshot })),
-			thinkingLevel: "off",
-			activeToolNames: ["ipython"],
-			allowedToolNames: ["ipython"],
-		});
-		const { session } = await createAgentSessionFromServices({ services, sessionManager });
-		try {
-			expect(session.agent.state.systemPrompt).toContain("RESTORED_PERSONA_SENTINEL");
-			expect(session.agent.state.systemPrompt).toContain("selected method sentinel");
-			expect(session.getActiveToolNames()).toEqual(["ipython"]);
-			expect(session.thinkingLevel).toBe("off");
 	it("shows the telemetry disclosure independently of the Herdr reporter", async () => {
 		vi.stubEnv("PRIME_AGENT_TELEMETRY", "1");
 		const tempDir = join(tmpdir(), `pi-session-telemetry-notice-${Date.now()}`);
@@ -188,15 +126,25 @@ describe("createAgentSessionFromServices", () => {
 				noPromptTemplates: true,
 				noThemes: true,
 				extensionFactories: [
-					(pi) =>
+					(pi) => {
+						pi.registerTool({
+							name: "passive_tool",
+							label: "Passive Tool",
+							description: "Available but inactive template test tool.",
+							parameters: Type.Object({}),
+							execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {} }),
+						});
 						pi.registerAgentTemplate({
 							schema: "prime.agent-template/v1",
 							id: "prime/template/planner",
 							label: "Planner",
 							description: "Plans bounded changes.",
 							promptAppend: "RESTORED_PERSONA_SENTINEL",
+							activeToolNames: ["ipython"],
+							allowedToolNames: ["ipython", "passive_tool"],
 							skills: { include: [selectedSkill.name], exposeSelected: true },
-						}),
+						});
+					},
 				],
 				skillsOverride: () => ({ skills: [selectedSkill], diagnostics: [] }),
 			},
@@ -221,12 +169,17 @@ describe("createAgentSessionFromServices", () => {
 			skillSnapshots: scope.skillSnapshots.map((snapshot) => ({ ...snapshot })),
 			thinkingLevel: "off",
 			activeToolNames: ["ipython"],
-			allowedToolNames: ["ipython"],
+			allowedToolNames: ["ipython", "passive_tool"],
 		});
 		const { session } = await createAgentSessionFromServices({ services, sessionManager });
 		try {
 			expect(session.agent.state.systemPrompt).toContain("RESTORED_PERSONA_SENTINEL");
 			expect(session.agent.state.systemPrompt).toContain("selected method sentinel");
+			expect(session.getActiveToolNames()).toEqual(["ipython"]);
+			expect(session.getAllTools().map((tool) => tool.name)).toEqual(
+				expect.arrayContaining(["ipython", "passive_tool"]),
+			);
+			await session.reload();
 			expect(session.getActiveToolNames()).toEqual(["ipython"]);
 			expect(session.thinkingLevel).toBe("off");
 		} finally {

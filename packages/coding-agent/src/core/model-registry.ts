@@ -372,6 +372,10 @@ function readOpenAICodexAccountId(token: string): string | undefined {
 	}
 }
 
+// This is the Codex catalog protocol compatibility version, not the Prime Agent package version.
+// OpenAI gates model visibility by this semver; Prime Agent 0.x versions can otherwise yield an empty catalog.
+const OPENAI_CODEX_MODEL_CATALOG_CLIENT_VERSION = "1.0.0";
+
 function openAICodexModelsUrl(baseUrl: string): string {
 	const normalized = baseUrl.replace(/\/+$/, "");
 	let path: string;
@@ -383,7 +387,7 @@ function openAICodexModelsUrl(baseUrl: string): string {
 		path = `${normalized}/codex/models`;
 	}
 	const url = new URL(path);
-	url.searchParams.set("client_version", VERSION);
+	url.searchParams.set("client_version", OPENAI_CODEX_MODEL_CATALOG_CLIENT_VERSION);
 	return url.toString();
 }
 

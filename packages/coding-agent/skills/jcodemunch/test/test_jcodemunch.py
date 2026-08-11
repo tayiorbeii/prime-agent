@@ -47,8 +47,6 @@ class JCodeMunchTest(unittest.TestCase):
         config = {
             "type": "stdio",
             "bridge": "host",
-            "command": "secret-jcodemunch",
-            "env": {"TOKEN": "secret"},
         }
         with mock.patch.object(
             McpIntegration, "_resolve_host_config", new=mock.AsyncMock(return_value=config)
@@ -90,14 +88,14 @@ class JCodeMunchTest(unittest.TestCase):
         integration = jcodemunch.JCodeMunch()
         session = FakeSession()
 
-        async def open_session(stack):
+        async def open_session(stack, config=None):
             return session
 
         with mock.patch.object(integration, "_open_session", open_session), \
              mock.patch.object(
                  McpIntegration,
                  "_resolve_host_config",
-                 new=mock.AsyncMock(return_value={"url": "https://sidecar.test/mcp"}),
+                 new=mock.AsyncMock(return_value={"type": "http", "url": "https://sidecar.test/mcp"}),
              ):
             diagnostic = run(integration.available())
             self.assertEqual(run(integration.search_symbols(repo="demo", query="Thing")), {"ok": True})
@@ -116,8 +114,6 @@ class JCodeMunchTest(unittest.TestCase):
                 return {
                     "type": "stdio",
                     "bridge": "host",
-                    "command": "secret-jcodemunch",
-                    "env": {"TOKEN": "secret"},
                 }
             if req_type == "mcp.list_tools":
                 return {
@@ -166,15 +162,19 @@ class JCodeMunchTest(unittest.TestCase):
             async def __aexit__(self, *args):
                 return False
 
-        def transport(url, headers=None):
+        def transport(url, *, http_client=None):
             captured["url"] = url
-            captured["headers"] = headers
+            captured["headers"] = {
+                "X-Trace": http_client.headers.get("X-Trace"),
+                "Accept-Encoding": http_client.headers.get("Accept-Encoding"),
+            }
             return TransportContext()
 
+        config = {"type": "http", "url": "https://sidecar.test/mcp", "headers": {"X-Trace": "1"}}
         with mock.patch.object(
-            McpIntegration,
-            "_resolve_config",
-            new=mock.AsyncMock(return_value=("https://sidecar.test/mcp", {"X-Trace": "1"})),
+            integration,
+            "_resolve_host_config",
+            new=mock.AsyncMock(side_effect=AssertionError("config resolved twice")),
         ), mock.patch.object(integration, "_resolve_token", new=mock.AsyncMock(return_value=None)), \
              mock.patch.object(jcodemunch.mcp_base, "_resolve_streamable_http", return_value=transport), \
              mock.patch("mcp.ClientSession") as session_class:
@@ -182,14 +182,63 @@ class JCodeMunchTest(unittest.TestCase):
             session.initialize = mock.AsyncMock()
             session_class.return_value.__aenter__ = mock.AsyncMock(return_value=session)
             session_class.return_value.__aexit__ = mock.AsyncMock(return_value=False)
+            run(integration._open_session(AsyncExitStack(), config))
+        self.assertEqual(
+            captured,
+            {
+                "url": "https://sidecar.test/mcp",
+                "headers": {"X-Trace": "1", "Accept-Encoding": "identity"},
+            },
+        )
+
+    def test_environment_fallback_open_drops_host_secrets_and_does_not_read_stored_auth(self):
+        integration = jcodemunch.JCodeMunch()
+        captured = {}
+
+        class TransportContext:
+            async def __aenter__(self):
+                return ("read", "write", None)
+            async def __aexit__(self, *args):
+                return False
+
+        def transport(url, *, http_client=None):
+            captured.update(
+                url=url,
+                authorization=http_client.headers.get("Authorization"),
+                secret=http_client.headers.get("X-Secret"),
+                accept_encoding=http_client.headers.get("Accept-Encoding"),
+            )
+            return TransportContext()
+
+        with mock.patch.dict("os.environ", {"JCODEMUNCH_MCP_URL": "http://localhost:7777/mcp"}, clear=False), mock.patch.object(
+            integration,
+            "_resolve_host_config",
+            new=mock.AsyncMock(return_value={"headers": {"Authorization": "host-secret", "X-Secret": "value"}}),
+        ), mock.patch.object(
+            integration, "_resolve_token", new=mock.AsyncMock(side_effect=AssertionError("stored auth read"))
+        ), mock.patch.object(
+            jcodemunch.mcp_base, "_resolve_streamable_http", return_value=transport
+        ), mock.patch("mcp.ClientSession") as session_class:
+            session = mock.MagicMock()
+            session.initialize = mock.AsyncMock()
+            session_class.return_value.__aenter__ = mock.AsyncMock(return_value=session)
+            session_class.return_value.__aexit__ = mock.AsyncMock(return_value=False)
             run(integration._open_session(AsyncExitStack()))
-        self.assertEqual(captured, {"url": "https://sidecar.test/mcp", "headers": {"X-Trace": "1"}})
+        self.assertEqual(
+            captured,
+            {
+                "url": "http://localhost:7777/mcp",
+                "authorization": None,
+                "secret": None,
+                "accept_encoding": "identity",
+            },
+        )
 
     def test_missing_server_capability_is_actionable(self):
         integration = jcodemunch.JCodeMunch()
         session = FakeSession()
 
-        async def open_session(stack):
+        async def open_session(stack, config=None):
             return session
 
         async def host_request(request_type, payload=None):
@@ -201,6 +250,22 @@ class JCodeMunchTest(unittest.TestCase):
         ):
             with self.assertRaisesRegex(AttributeError, "does not provide 'get_file_outline'"):
                 run(integration.call_tool("get_file_outline", {"repo": "demo", "file_path": "a.py"}))
+
+    def test_environment_fallback_fails_closed_when_host_config_errors(self):
+        integration = jcodemunch.JCodeMunch()
+        with mock.patch.dict("os.environ", {"JCODEMUNCH_MCP_URL": "http://localhost:7777/mcp"}), mock.patch.object(
+            integration, "_host_request", new=mock.AsyncMock(side_effect=RuntimeError("host failed"))
+        ):
+            with self.assertRaisesRegex(RuntimeError, "host failed"):
+                run(integration._resolve_config())
+
+    def test_environment_fallback_does_not_receive_host_headers_or_stored_auth(self):
+        integration = jcodemunch.JCodeMunch()
+        config = {"headers": {"Authorization": "secret", "X-Secret": "value"}}
+        with mock.patch.dict("os.environ", {"JCODEMUNCH_MCP_URL": "http://localhost:7777/mcp"}):
+            url = integration._fallback_url()
+            self.assertEqual(integration._headers_for_config(config, url), {})
+            self.assertFalse(integration._allow_stored_auth(config, url))
 
 
 if __name__ == "__main__":

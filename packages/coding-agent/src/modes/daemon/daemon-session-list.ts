@@ -8,6 +8,7 @@ import type { AgentSessionRuntimeDiagnostic } from "../../core/agent-session-ser
 import { type AgentCronJob, isHeartbeatCronJob } from "../../core/cron-jobs.js";
 import type { SessionActionSnapshot } from "../../core/session-action-store.js";
 import type { AgentTaskState, SessionInfo } from "../../core/session-manager.js";
+import type { SkillEnforcementResultV1 } from "../../core/skill-enforcement.js";
 import type { AgentConnectionRlmChildAgentSnapshot } from "../agent-connection/types.js";
 import type { ActiveSessionState } from "./active-session-state.js";
 
@@ -67,6 +68,8 @@ export interface SessionSummary {
 	parentSessionId?: string;
 	parentSessionPath?: string;
 	rlmChildId?: string;
+	rlmChildRegistryStatus?: "running" | "completed" | "enforcement_failed" | "deleted";
+	skillEnforcementResult?: SkillEnforcementResultV1;
 	repliedSinceTask?: boolean;
 	rlmParentNodeId?: string;
 	/** Source of the IPython cell that spawned this subagent, for display. */
@@ -209,6 +212,8 @@ export function summaryForActiveSession(
 		}
 	}
 
+	const skillEnforcementResult = session.getSkillEnforcementResult?.();
+
 	return {
 		id: activeSession.activeSessionId,
 		lifecycle: activeLifecycleForSession(activeSession),
@@ -253,6 +258,13 @@ export function summaryForActiveSession(
 		parentSessionId: metadata.parentSessionId,
 		parentSessionPath: savedSession?.parentSessionPath ?? metadata.parentSessionFile,
 		rlmChildId: metadata.rlmChildId,
+		...(skillEnforcementResult
+			? {
+				rlmChildRegistryStatus:
+					skillEnforcementResult.status === "failed" ? "enforcement_failed" : "completed",
+				skillEnforcementResult,
+			}
+			: {}),
 		...(metadata.kind === "subagent" && session.repliedToParentSinceTask !== undefined
 			? { repliedSinceTask: session.repliedToParentSinceTask }
 			: {}),

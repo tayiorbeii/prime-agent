@@ -1086,6 +1086,9 @@ export interface ExtensionAPI {
 	/** Register a child-only RLM agent template. Templates are never added to the root prompt. */
 	registerAgentTemplate(template: AgentTemplateDefinitionV1): void;
 
+	/** Versioned host capabilities that extensions must fail closed against. */
+	getHostCapabilities(): Readonly<{ agentTemplateSkillEnforcementV1: true }>;
+
 	// =========================================================================
 	// Command, Shortcut, Flag Registration
 	// =========================================================================
